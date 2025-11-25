@@ -1,11 +1,13 @@
-import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
-import 'auth_screen.dart';  //  login/signup screen
-import 'home_screen.dart';  // Home screen after user logs in
+import 'screens/login_screen.dart';
+import 'screens/signup_screen.dart';
+import 'screens/home_screen.dart';
+import 'screens/feed_screen.dart';
+import 'screens/profile_screen.dart';
+import 'screens/photo_journal_screen.dart';
+import 'screens/settings_screen.dart';
 
-void main() async {
-  WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp();
+void main() {
   runApp(MyApp());
 }
 
@@ -13,11 +15,18 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Fitness App',
-      theme: ThemeData(
-        primarySwatch: Colors.blue,
-      ),
-      home: AuthScreen(),  // Login screen
+      title: 'Fitness Tracker',
+      theme: ThemeData(primarySwatch: Colors.blue),
+      initialRoute: '/',  // Set the initial route
+      routes: {
+        '/': (context) => LoginScreen(),
+        '/signup': (context) => SignUpScreen(),
+        '/home': (context) => HomeScreen(),
+        '/feed': (context) => FeedScreen(),
+        '/profile': (context) => ProfileScreen(),
+        '/photo_journal': (context) => PhotoJournalScreen(),
+        '/settings': (context) => SettingsScreen(),
+      },
     );
   }
 }
