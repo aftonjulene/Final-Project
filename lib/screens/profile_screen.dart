@@ -72,7 +72,7 @@ class ProfileScreen extends StatelessWidget {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (context) => const //EditProfileScreen(),
+                        builder: (context) => const EditProfileScreen(),
                       ),
                     );
                   },
@@ -111,7 +111,7 @@ class ProfileScreen extends StatelessWidget {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (context) =>  PhotoJournalScreen(),
+                      builder: (context) => PhotoJournalScreen(),
                     ),
                   );
                 },
@@ -124,9 +124,7 @@ class ProfileScreen extends StatelessWidget {
                 onTap: () {
                   Navigator.push(
                     context,
-                    MaterialPageRoute(
-                      builder: (context) => SettingsScreen(),
-                    ),
+                    MaterialPageRoute(builder: (context) => SettingsScreen()),
                   );
                 },
               ),
