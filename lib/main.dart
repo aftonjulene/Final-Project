@@ -29,7 +29,7 @@ class BeastModeApp extends StatelessWidget {
           if (snapshot.data == null) {
             return const SignInScreen();
           }
-          // User is signed in — return a placeholder or the app's home screen
+          // User is signed in — returns placeholder
           return const Scaffold(body: Center(child: Text('Welcome')));
         },
       ),
