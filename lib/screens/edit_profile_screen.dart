@@ -1,153 +1,253 @@
 import 'package:flutter/material.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 
 class EditProfileScreen extends StatefulWidget {
-  const EditProfileScreen({super.key});
+  const EditProfileScreen({Key? key}) : super(key: key);
 
   @override
   State<EditProfileScreen> createState() => _EditProfileScreenState();
 }
 
 class _EditProfileScreenState extends State<EditProfileScreen> {
-  final _nameController = TextEditingController();
-  final _goalController = TextEditingController();
-  final _auth = FirebaseAuth.instance;
-  final _db = FirebaseFirestore.instance;
-
-  bool _loading = true;
-  bool _saving = false;
-  String? _error;
-
-  @override
-  void initState() {
-    super.initState();
-    _loadProfile();
-  }
+  final _fullNameController = TextEditingController(text: 'John Doe');
+  final _usernameController = TextEditingController(text: '@johndoe');
+  final _bioController = TextEditingController();
+  String _selectedGoal = 'Build Muscle';
+  final List<String> _fitnessGoals = [
+    'Lose Weight',
+    'Build Muscle',
+    'Stay Fit',
+    'Improve Endurance',
+    'Gain Flexibility'
+  ];
 
   @override
   void dispose() {
-    _nameController.dispose();
-    _goalController.dispose();
+    _fullNameController.dispose();
+    _usernameController.dispose();
+    _bioController.dispose();
     super.dispose();
-  }
-
-  Future<void> _loadProfile() async {
-    try {
-      final user = _auth.currentUser;
-      if (user == null) {
-        setState(() {
-          _error = 'No user signed in.';
-          _loading = false;
-        });
-        return;
-      }
-
-      final doc = await _db.collection('users').doc(user.uid).get();
-      final data = doc.data();
-
-      if (data != null) {
-        _nameController.text = (data['displayName'] ?? '') as String;
-        _goalController.text = (data['goal'] ?? '') as String;
-      }
-    } catch (e) {
-      setState(() {
-        _error = 'Failed to load profile.';
-      });
-    } finally {
-      if (mounted) {
-        setState(() {
-          _loading = false;
-        });
-      }
-    }
-  }
-
-  Future<void> _saveProfile() async {
-    final user = _auth.currentUser;
-    if (user == null) {
-      setState(() {
-        _error = 'No user signed in.';
-      });
-      return;
-    }
-
-    setState(() {
-      _saving = true;
-      _error = null;
-    });
-
-    try {
-      final name = _nameController.text.trim();
-      final goal = _goalController.text.trim();
-
-      await _db.collection('users').doc(user.uid).update({
-        'displayName': name,
-        'goal': goal,
-      });
-
-      // keep auth display name in sync
-      await user.updateDisplayName(name);
-
-      if (mounted) {
-        Navigator.of(context).pop();
-      }
-    } catch (e) {
-      setState(() {
-        _error = 'Failed to save changes. Try again.';
-      });
-    } finally {
-      if (mounted) {
-        setState(() {
-          _saving = false;
-        });
-      }
-    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Edit Profile')),
-      body: _loading
-          ? const Center(child: CircularProgressIndicator())
-          : Padding(
-              padding: const EdgeInsets.all(24),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+      appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () {
+            Navigator.pop(context);
+          },
+        ),
+        title: const Text(
+          'Edit Profile',
+          style: TextStyle(fontWeight: FontWeight.w600),
+        ),
+        backgroundColor: Colors.white,
+        elevation: 0,
+        foregroundColor: Colors.black,
+      ),
+      body: SingleChildScrollView(
+        child: Padding(
+          padding: const EdgeInsets.all(24.0),
+          child: Column(
+            children: [
+              Stack(
                 children: [
-                  if (_error != null) ...[
-                    Text(_error!, style: const TextStyle(color: Colors.red)),
-                    const SizedBox(height: 12),
-                  ],
-                  TextField(
-                    controller: _nameController,
-                    decoration: const InputDecoration(labelText: 'Name'),
-                  ),
-                  const SizedBox(height: 16),
-                  TextField(
-                    controller: _goalController,
-                    decoration: const InputDecoration(
-                      labelText: 'Fitness goal (ex: Build muscle)',
+                  CircleAvatar(
+                    radius: 50,
+                    backgroundColor: Colors.grey[300],
+                    child: const Text(
+                      'JD',
+                      style: TextStyle(
+                        fontSize: 32,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.grey,
+                      ),
                     ),
                   ),
-                  const SizedBox(height: 24),
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton(
-                      onPressed: _saving ? null : _saveProfile,
-                      child: _saving
-                          ? const SizedBox(
-                              height: 16,
-                              width: 16,
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            )
-                          : const Text('Save'),
+                  Positioned(
+                    bottom: 0,
+                    right: 0,
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        shape: BoxShape.circle,
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.1),
+                            blurRadius: 8,
+                          ),
+                        ],
+                      ),
+                      child: IconButton(
+                        icon: const Icon(Icons.camera_alt, size: 20),
+                        onPressed: () {
+                          // Handle change photo
+                        },
+                      ),
                     ),
                   ),
                 ],
               ),
-            ),
+              const SizedBox(height: 8),
+              TextButton.icon(
+                onPressed: () {
+                  // Handle change photo
+                },
+                icon: const Icon(Icons.camera_alt, size: 16),
+                label: const Text('Change Photo'),
+                style: TextButton.styleFrom(
+                  foregroundColor: Colors.grey[700],
+                ),
+              ),
+              const SizedBox(height: 32),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: const Text(
+                  'Full Name',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 8),
+              TextField(
+                controller: _fullNameController,
+                decoration: InputDecoration(
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: const BorderSide(color: Colors.grey),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: const BorderSide(color: Colors.grey),
+                  ),
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 12,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 20),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: const Text(
+                  'Username',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 8),
+              TextField(
+                controller: _usernameController,
+                decoration: InputDecoration(
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: const BorderSide(color: Colors.grey),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: const BorderSide(color: Colors.grey),
+                  ),
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 12,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 20),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: const Text(
+                  'Bio',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 8),
+              TextField(
+                controller: _bioController,
+                maxLines: 4,
+                decoration: InputDecoration(
+                  hintText: 'Tell us about yourself...',
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: const BorderSide(color: Colors.grey),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: const BorderSide(color: Colors.grey),
+                  ),
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 12,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 20),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: const Text(
+                  'Fitness Goal',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 8),
+              ...(_fitnessGoals.map((goal) => Container(
+                    margin: const EdgeInsets.only(bottom: 8),
+                    decoration: BoxDecoration(
+                      border: Border.all(color: Colors.grey[300]!),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: ListTile(
+                      title: Text(goal),
+                      trailing: _selectedGoal == goal
+                          ? const Icon(Icons.check_circle, color: Color(0xFF1a1d2e))
+                          : null,
+                      onTap: () {
+                        setState(() {
+                          _selectedGoal = goal;
+                        });
+                      },
+                    ),
+                  ))),
+              const SizedBox(height: 32),
+              SizedBox(
+                width: double.infinity,
+                height: 50,
+                child: ElevatedButton(
+                  onPressed: () {
+                    // Handle save profile
+                    Navigator.pop(context);
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF1a1d2e),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                  child: const Text(
+                    'Save Changes',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

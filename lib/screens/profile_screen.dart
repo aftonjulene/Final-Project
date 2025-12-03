@@ -1,10 +1,45 @@
 import 'package:flutter/material.dart';
+import '../services/auth_service.dart';
 import 'edit_profile_screen.dart';
 import 'photo_journal_screen.dart';
 import 'settings_screen.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({Key? key}) : super(key: key);
+
+  Future<void> _handleLogout(BuildContext context) async {
+    final auth = AuthService();
+
+    final shouldLogout = await showDialog<bool>(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Logout'),
+          content: const Text('Are you sure you want to logout?'),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop(false);
+              },
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop(true);
+              },
+              child: const Text('Logout', style: TextStyle(color: Colors.red)),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (shouldLogout == true) {
+      await auth.signOut();
+      // send the user back to the first screen (Welcome)
+      Navigator.of(context).popUntil((route) => route.isFirst);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -14,23 +49,6 @@ class ProfileScreen extends StatelessWidget {
           'Profile',
           style: TextStyle(fontWeight: FontWeight.w600),
         ),
-        actions: [
-          Chip(
-            label: const Text('All', style: TextStyle(fontSize: 12)),
-            backgroundColor: Colors.grey[200],
-          ),
-          const SizedBox(width: 4),
-          Chip(
-            label: const Text('Map', style: TextStyle(fontSize: 12)),
-            backgroundColor: Colors.grey[200],
-          ),
-          const SizedBox(width: 4),
-          Chip(
-            label: const Text('Auth', style: TextStyle(fontSize: 12)),
-            backgroundColor: Colors.grey[200],
-          ),
-          const SizedBox(width: 8),
-        ],
         backgroundColor: Colors.white,
         elevation: 0,
         foregroundColor: Colors.black,
@@ -40,7 +58,6 @@ class ProfileScreen extends StatelessWidget {
           padding: const EdgeInsets.all(24.0),
           child: Column(
             children: [
-              // Profile Picture
               CircleAvatar(
                 radius: 50,
                 backgroundColor: Colors.grey[300],
@@ -64,7 +81,6 @@ class ProfileScreen extends StatelessWidget {
                 style: TextStyle(fontSize: 14, color: Colors.grey),
               ),
               const SizedBox(height: 24),
-              // Edit Profile Button
               SizedBox(
                 width: double.infinity,
                 child: OutlinedButton(
@@ -93,7 +109,6 @@ class ProfileScreen extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 24),
-
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: [
@@ -103,7 +118,6 @@ class ProfileScreen extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: 24),
-              // Photo Journal Button
               _buildMenuButton(
                 icon: Icons.photo_library,
                 title: 'Photo Journal',
@@ -111,21 +125,30 @@ class ProfileScreen extends StatelessWidget {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (context) => PhotoJournalScreen(),
+                      builder: (context) => const PhotoJournalScreen(),
                     ),
                   );
                 },
               ),
               const SizedBox(height: 12),
-
               _buildMenuButton(
                 icon: Icons.settings,
                 title: 'Settings',
                 onTap: () {
                   Navigator.push(
                     context,
-                    MaterialPageRoute(builder: (context) => SettingsScreen()),
+                    MaterialPageRoute(
+                      builder: (context) => const SettingsScreen(),
+                    ),
                   );
+                },
+              ),
+              const SizedBox(height: 12),
+              _buildMenuButton(
+                icon: Icons.logout,
+                title: 'Logout',
+                onTap: () {
+                  _handleLogout(context);
                 },
               ),
               const SizedBox(height: 24),
@@ -137,7 +160,6 @@ class ProfileScreen extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 16),
-
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
