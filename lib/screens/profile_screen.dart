@@ -14,23 +14,6 @@ class ProfileScreen extends StatelessWidget {
           'Profile',
           style: TextStyle(fontWeight: FontWeight.w600),
         ),
-        actions: [
-          Chip(
-            label: const Text('All', style: TextStyle(fontSize: 12)),
-            backgroundColor: Colors.grey[200],
-          ),
-          const SizedBox(width: 4),
-          Chip(
-            label: const Text('Map', style: TextStyle(fontSize: 12)),
-            backgroundColor: Colors.grey[200],
-          ),
-          const SizedBox(width: 4),
-          Chip(
-            label: const Text('Auth', style: TextStyle(fontSize: 12)),
-            backgroundColor: Colors.grey[200],
-          ),
-          const SizedBox(width: 8),
-        ],
         backgroundColor: Colors.white,
         elevation: 0,
         foregroundColor: Colors.black,
