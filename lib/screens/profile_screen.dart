@@ -1,8 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+
 import '../services/auth_service.dart';
+import '../models/user_profile.dart';
 import 'edit_profile_screen.dart';
 import 'photo_journal_screen.dart';
 import 'settings_screen.dart';
+import 'login_screen.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({Key? key}) : super(key: key);
@@ -36,13 +41,25 @@ class ProfileScreen extends StatelessWidget {
 
     if (shouldLogout == true) {
       await auth.signOut();
-      // send the user back to the first screen (Welcome)
-      Navigator.of(context).popUntil((route) => route.isFirst);
+
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(builder: (_) => const LoginScreen()),
+        (route) => false,
+      );
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final user = FirebaseAuth.instance.currentUser;
+
+    if (user == null) {
+      // should not really happen, but just in case
+      return const Scaffold(body: Center(child: Text('No user logged in')));
+    }
+
+    final docRef = FirebaseFirestore.instance.collection('users').doc(user.uid);
+
     return Scaffold(
       appBar: AppBar(
         title: const Text(
@@ -53,146 +70,191 @@ class ProfileScreen extends StatelessWidget {
         elevation: 0,
         foregroundColor: Colors.black,
       ),
-      body: SingleChildScrollView(
-        child: Padding(
-          padding: const EdgeInsets.all(24.0),
-          child: Column(
-            children: [
-              CircleAvatar(
-                radius: 50,
-                backgroundColor: Colors.grey[300],
-                child: const Text(
-                  'JD',
-                  style: TextStyle(
-                    fontSize: 32,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.grey,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 16),
-              const Text(
-                'John Doe',
-                style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 4),
-              const Text(
-                '@johndoe • Build Muscle',
-                style: TextStyle(fontSize: 14, color: Colors.grey),
-              ),
-              const SizedBox(height: 24),
-              SizedBox(
-                width: double.infinity,
-                child: OutlinedButton(
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const EditProfileScreen(),
+      body: StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
+        stream: docRef.snapshots(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
+
+          if (!snapshot.hasData || !snapshot.data!.exists) {
+            return const Center(child: Text('Profile not found'));
+          }
+
+          final data = snapshot.data!.data()!;
+          final profile = UserProfile.fromDoc(snapshot.data!);
+
+          final initials = (profile.displayName ?? profile.email)
+              .trim()
+              .split(RegExp(r'\s+'))
+              .where((p) => p.isNotEmpty)
+              .map((p) => p[0].toUpperCase())
+              .take(2)
+              .join();
+
+          final handle = '@${profile.email.split('@').first}';
+          final goalText = profile.goal ?? 'No goal set yet';
+
+          return SingleChildScrollView(
+            child: Padding(
+              padding: const EdgeInsets.all(24.0),
+              child: Column(
+                children: [
+                  CircleAvatar(
+                    radius: 50,
+                    backgroundColor: Colors.grey[300],
+                    child: Text(
+                      initials.isEmpty ? 'BM' : initials,
+                      style: const TextStyle(
+                        fontSize: 32,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.grey,
                       ),
-                    );
-                  },
-                  style: OutlinedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                    side: const BorderSide(color: Color(0xFF1a1d2e)),
-                    shape: RoundedRectangleBorder(
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    profile.displayName?.isNotEmpty == true
+                        ? profile.displayName!
+                        : profile.email,
+                    style: const TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    '$handle • $goalText',
+                    style: const TextStyle(fontSize: 14, color: Colors.grey),
+                  ),
+                  const SizedBox(height: 24),
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton(
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const EditProfileScreen(),
+                          ),
+                        );
+                      },
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        side: const BorderSide(color: Color(0xFF1a1d2e)),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                      ),
+                      child: const Text(
+                        'Edit Profile',
+                        style: TextStyle(
+                          color: Color(0xFF1a1d2e),
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    children: [
+                      _buildStatCard(
+                        (data['workoutCount'] ?? 0).toString(),
+                        'Workouts',
+                      ),
+                      _buildStatCard(
+                        (data['streak'] ?? 0).toString(),
+                        'Day Streak',
+                      ),
+                      _buildStatCard((data['prs'] ?? 0).toString(), 'PRs'),
+                    ],
+                  ),
+                  const SizedBox(height: 24),
+                  _buildMenuButton(
+                    icon: Icons.photo_library,
+                    title: 'Photo Journal',
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const PhotoJournalScreen(),
+                        ),
+                      );
+                    },
+                  ),
+                  const SizedBox(height: 12),
+                  _buildMenuButton(
+                    icon: Icons.settings,
+                    title: 'Settings',
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const SettingsScreen(),
+                        ),
+                      );
+                    },
+                  ),
+                  const SizedBox(height: 12),
+                  _buildMenuButton(
+                    icon: Icons.logout,
+                    title: 'Logout',
+                    onTap: () {
+                      _handleLogout(context);
+                    },
+                  ),
+                  const SizedBox(height: 24),
+                  const Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      'Recent Workouts',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  // this will be wired to real workout data later
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      border: Border.all(color: Colors.grey[300]!),
                       borderRadius: BorderRadius.circular(8),
                     ),
-                  ),
-                  child: const Text(
-                    'Edit Profile',
-                    style: TextStyle(
-                      color: Color(0xFF1a1d2e),
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 24),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: [
-                  _buildStatCard('127', 'Workouts'),
-                  _buildStatCard('18', 'Day Streak'),
-                  _buildStatCard('42', 'PRs'),
-                ],
-              ),
-              const SizedBox(height: 24),
-              _buildMenuButton(
-                icon: Icons.photo_library,
-                title: 'Photo Journal',
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const PhotoJournalScreen(),
-                    ),
-                  );
-                },
-              ),
-              const SizedBox(height: 12),
-              _buildMenuButton(
-                icon: Icons.settings,
-                title: 'Settings',
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const SettingsScreen(),
-                    ),
-                  );
-                },
-              ),
-              const SizedBox(height: 12),
-              _buildMenuButton(
-                icon: Icons.logout,
-                title: 'Logout',
-                onTap: () {
-                  _handleLogout(context);
-                },
-              ),
-              const SizedBox(height: 24),
-              const Align(
-                alignment: Alignment.centerLeft,
-                child: Text(
-                  'Recent Workouts',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                ),
-              ),
-              const SizedBox(height: 16),
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  border: Border.all(color: Colors.grey[300]!),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: const [
-                        Text(
-                          'Leg Day',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                          ),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Sample Workout',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            SizedBox(height: 4),
+                            Text(
+                              'Will show last real workout soon',
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: Colors.grey,
+                              ),
+                            ),
+                          ],
                         ),
-                        SizedBox(height: 4),
-                        Text(
-                          'Nov 19 • 6 exercises',
-                          style: TextStyle(fontSize: 14, color: Colors.grey),
-                        ),
+                        Icon(Icons.chevron_right, color: Colors.grey),
                       ],
                     ),
-                    Icon(Icons.chevron_right, color: Colors.grey[400]),
-                  ],
-                ),
+                  ),
+                ],
               ),
-            ],
-          ),
-        ),
+            ),
+          );
+        },
       ),
     );
   }
