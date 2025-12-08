@@ -1,6 +1,7 @@
+import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:flutter/material.dart';
+import 'workout_log_screen.dart';
 
 class WorkoutHistoryScreen extends StatefulWidget {
   const WorkoutHistoryScreen({super.key});
@@ -26,46 +27,8 @@ class _WorkoutHistoryScreenState extends State<WorkoutHistoryScreen> {
         .snapshots();
   }
 
-  Future<void> _deleteWorkout(BuildContext context, String workoutId) async {
-    final confirm = await showDialog<bool>(
-      context: context,
-      builder: (ctx) {
-        return AlertDialog(
-          title: const Text('Delete workout?'),
-          content: const Text(
-            'This will permanently delete this workout from your history.',
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(ctx).pop(false),
-              child: const Text('Cancel'),
-            ),
-            TextButton(
-              onPressed: () => Navigator.of(ctx).pop(true),
-              child: const Text('Delete', style: TextStyle(color: Colors.red)),
-            ),
-          ],
-        );
-      },
-    );
-
-    if (confirm != true) return;
-
-    try {
-      await FirebaseFirestore.instance
-          .collection('workouts')
-          .doc(workoutId)
-          .delete();
-      if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Workout deleted.')));
-    } catch (_) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Failed to delete workout.')),
-      );
-    }
+  Future<void> _deleteWorkout(String id) async {
+    await FirebaseFirestore.instance.collection('workouts').doc(id).delete();
   }
 
   @override
@@ -77,7 +40,9 @@ class _WorkoutHistoryScreenState extends State<WorkoutHistoryScreen> {
         appBar: AppBar(
           leading: IconButton(
             icon: const Icon(Icons.arrow_back),
-            onPressed: () => Navigator.pop(context),
+            onPressed: () {
+              Navigator.pop(context);
+            },
           ),
           title: const Text(
             'Workout History',
@@ -88,7 +53,7 @@ class _WorkoutHistoryScreenState extends State<WorkoutHistoryScreen> {
           foregroundColor: Colors.black,
         ),
         body: const Center(
-          child: Text('Please log in to view workout history.'),
+          child: Text('Please log in to view your workout history.'),
         ),
       );
     }
@@ -97,7 +62,9 @@ class _WorkoutHistoryScreenState extends State<WorkoutHistoryScreen> {
       appBar: AppBar(
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
-          onPressed: () => Navigator.pop(context),
+          onPressed: () {
+            Navigator.pop(context);
+          },
         ),
         title: const Text(
           'Workout History',
@@ -109,30 +76,46 @@ class _WorkoutHistoryScreenState extends State<WorkoutHistoryScreen> {
       ),
       body: Column(
         children: [
-          // Search bar
+          // search + filter row
           Padding(
             padding: const EdgeInsets.all(16.0),
-            child: TextField(
-              controller: _searchController,
-              decoration: InputDecoration(
-                hintText: 'Search workouts...',
-                prefixIcon: const Icon(Icons.search),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
-                  borderSide: BorderSide(color: Colors.grey[300]!),
+            child: Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _searchController,
+                    decoration: InputDecoration(
+                      hintText: 'Search workouts...',
+                      prefixIcon: const Icon(Icons.search),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                        borderSide: BorderSide(color: Colors.grey[300]!),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                        borderSide: BorderSide(color: Colors.grey[300]!),
+                      ),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 12,
+                      ),
+                    ),
+                  ),
                 ),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
-                  borderSide: BorderSide(color: Colors.grey[300]!),
+                const SizedBox(width: 12),
+                Container(
+                  decoration: BoxDecoration(
+                    border: Border.all(color: Colors.grey[300]!),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: IconButton(
+                    icon: const Icon(Icons.filter_list),
+                    onPressed: () {
+                      _showFilterOptions(context);
+                    },
+                  ),
                 ),
-                contentPadding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 12,
-                ),
-              ),
-              onChanged: (_) {
-                setState(() {});
-              },
+              ],
             ),
           ),
           Expanded(
@@ -146,7 +129,7 @@ class _WorkoutHistoryScreenState extends State<WorkoutHistoryScreen> {
                 }
 
                 if (snapshot.hasError) {
-                  return const Center(child: Text('Failed to load workouts.'));
+                  return const Center(child: Text('Could not load workouts.'));
                 }
 
                 final docs = snapshot.data?.docs ?? [];
@@ -154,33 +137,96 @@ class _WorkoutHistoryScreenState extends State<WorkoutHistoryScreen> {
                   return const Center(child: Text('No workouts logged yet.'));
                 }
 
-                final query = _searchController.text.trim().toLowerCase();
-                final filteredDocs = query.isEmpty
-                    ? docs
-                    : docs.where((doc) {
-                        final data = doc.data();
-                        final title =
-                            (data['title'] as String?)?.toLowerCase() ?? '';
-                        final notes =
-                            (data['notes'] as String?)?.toLowerCase() ?? '';
-                        return title.contains(query) || notes.contains(query);
-                      }).toList();
-
-                if (filteredDocs.isEmpty) {
-                  return const Center(
-                    child: Text('No workouts match your search.'),
-                  );
-                }
-
                 return ListView.builder(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
-                  itemCount: filteredDocs.length,
+                  itemCount: docs.length,
                   itemBuilder: (context, index) {
-                    final doc = filteredDocs[index];
-                    return _buildWorkoutCard(
-                      context: context,
-                      docId: doc.id,
-                      data: doc.data(),
+                    final doc = docs[index];
+                    final data = doc.data();
+
+                    final title = (data['title'] as String?) ?? 'Workout';
+                    final duration = data['durationMinutes'] as int?;
+                    final ts = data['date'];
+                    DateTime date;
+                    if (ts is Timestamp) {
+                      date = ts.toDate();
+                    } else {
+                      date = DateTime.now();
+                    }
+
+                    final dateLabel = '${date.month}/${date.day}/${date.year}';
+                    String subtitle = dateLabel;
+                    if (duration != null) {
+                      subtitle += ' • $duration min';
+                    }
+
+                    return Container(
+                      margin: const EdgeInsets.only(bottom: 12),
+                      decoration: BoxDecoration(
+                        border: Border.all(color: Colors.grey[300]!),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: ListTile(
+                        title: Text(
+                          title,
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        subtitle: Text(
+                          subtitle,
+                          style: TextStyle(color: Colors.grey[600]),
+                        ),
+                        onTap: () {
+                          Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) => WorkoutEditorScreen(
+                                mode: WorkoutEditorMode.edit,
+                                initialData: data,
+                                workoutId: doc.id,
+                              ),
+                            ),
+                          );
+                        },
+                        trailing: IconButton(
+                          icon: const Icon(Icons.delete, color: Colors.red),
+                          onPressed: () async {
+                            final confirm = await showDialog<bool>(
+                              context: context,
+                              builder: (context) {
+                                return AlertDialog(
+                                  title: const Text('Delete Workout'),
+                                  content: const Text(
+                                    'Are you sure you want to delete this workout?',
+                                  ),
+                                  actions: [
+                                    TextButton(
+                                      onPressed: () {
+                                        Navigator.pop(context, false);
+                                      },
+                                      child: const Text('Cancel'),
+                                    ),
+                                    TextButton(
+                                      onPressed: () {
+                                        Navigator.pop(context, true);
+                                      },
+                                      child: const Text(
+                                        'Delete',
+                                        style: TextStyle(color: Colors.red),
+                                      ),
+                                    ),
+                                  ],
+                                );
+                              },
+                            );
+
+                            if (confirm == true) {
+                              await _deleteWorkout(doc.id);
+                            }
+                          },
+                        ),
+                      ),
                     );
                   },
                 );
@@ -192,76 +238,66 @@ class _WorkoutHistoryScreenState extends State<WorkoutHistoryScreen> {
     );
   }
 
-  Widget _buildWorkoutCard({
-    required BuildContext context,
-    required String docId,
-    required Map<String, dynamic> data,
-  }) {
-    final title = (data['title'] as String?) ?? 'Workout';
-    final duration = data['durationMinutes'] as int?;
-    final ts = data['date'];
-    DateTime date;
-    if (ts is Timestamp) {
-      date = ts.toDate();
-    } else {
-      date = DateTime.now();
-    }
-
-    final dateLabel = '${date.month}/${date.day}/${date.year}';
-
-    String subtitle = dateLabel;
-    if (duration != null) {
-      subtitle += ' • $duration min';
-    }
-
-    final notes = data['notes'] as String?;
-    final hasNotes = notes != null && notes.trim().isNotEmpty;
-
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        border: Border.all(color: Colors.grey[300]!),
-        borderRadius: BorderRadius.circular(8),
+  void _showFilterOptions(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
       ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Left: title + details
-          Expanded(
+      builder: (BuildContext context) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.all(16.0),
             child: Column(
+              mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  title,
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
+                const Padding(
+                  padding: EdgeInsets.all(8.0),
+                  child: Text(
+                    'Filter Workouts',
+                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                   ),
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  subtitle,
-                  style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+                ListTile(
+                  title: const Text('All Workouts'),
+                  onTap: () {
+                    Navigator.pop(context);
+                  },
                 ),
-                if (hasNotes) ...[
-                  const SizedBox(height: 4),
-                  Text(
-                    notes!,
-                    style: TextStyle(fontSize: 13, color: Colors.grey[700]),
+                ListTile(
+                  title: const Text('This Week'),
+                  onTap: () {
+                    Navigator.pop(context);
+                  },
+                ),
+                ListTile(
+                  title: const Text('This Month'),
+                  onTap: () {
+                    Navigator.pop(context);
+                  },
+                ),
+                ListTile(
+                  title: const Text('Custom Range'),
+                  onTap: () {
+                    Navigator.pop(context);
+                  },
+                ),
+                const SizedBox(height: 8),
+                SizedBox(
+                  width: double.infinity,
+                  child: TextButton(
+                    onPressed: () {
+                      Navigator.pop(context);
+                    },
+                    child: const Text('Cancel'),
                   ),
-                ],
+                ),
               ],
             ),
           ),
-          const SizedBox(width: 8),
-          // Right: delete icon
-          IconButton(
-            icon: const Icon(Icons.delete_outline, color: Colors.red),
-            onPressed: () => _deleteWorkout(context, docId),
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
 }

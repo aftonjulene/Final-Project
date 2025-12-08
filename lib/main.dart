@@ -4,6 +4,7 @@ import 'firebase_options.dart';
 import 'screens/login_screen.dart';
 import 'screens/signup_screen.dart';
 import 'screens/home_screen.dart';
+import 'screens/workout_history_screen.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -60,6 +61,7 @@ class BeastModeApp extends StatelessWidget {
         '/login': (context) => LoginScreen(),
         '/signup': (context) => const SignUpScreen(),
         '/home': (context) => HomeScreen(),
+        '/workout_history': (context) => WorkoutHistoryScreen(),
       },
     );
   }

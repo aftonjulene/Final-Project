@@ -1,7 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-
 import 'workout_history_screen.dart';
 
 class LogWorkoutScreen extends StatelessWidget {
@@ -26,14 +25,12 @@ class LogWorkoutScreen extends StatelessWidget {
           children: [
             const SizedBox(height: 8),
             const Text(
-              'Add a workout with sets, reps, and weight, or reuse a previous one.',
+              'Add a workout using one of the options below.',
               style: TextStyle(fontSize: 14, color: Colors.grey),
             ),
             const SizedBox(height: 24),
-
-            // BIG main button – this is your "Add Workout"
             SizedBox(
-              height: 52,
+              height: 48,
               child: ElevatedButton.icon(
                 onPressed: () {
                   Navigator.of(context).push(
@@ -44,54 +41,50 @@ class LogWorkoutScreen extends StatelessWidget {
                     ),
                   );
                 },
-                icon: const Icon(Icons.add),
+                icon: const Icon(Icons.flash_on),
                 label: const Text(
-                  'Add Workout',
+                  'Quick Log',
                   style: TextStyle(fontWeight: FontWeight.w600),
                 ),
               ),
             ),
-            const SizedBox(height: 20),
-
-            // Secondary options: Template + Repeat
-            Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton.icon(
-                    onPressed: () {
-                      Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (_) => const WorkoutEditorScreen(
-                            mode: WorkoutEditorMode.template,
-                          ),
-                        ),
-                      );
-                    },
-                    icon: const Icon(Icons.list),
-                    label: const Text(
-                      'From Template',
-                      style: TextStyle(fontWeight: FontWeight.w600),
+            const SizedBox(height: 16),
+            SizedBox(
+              height: 48,
+              child: OutlinedButton.icon(
+                onPressed: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => const WorkoutEditorScreen(
+                        mode: WorkoutEditorMode.template,
+                      ),
                     ),
-                  ),
+                  );
+                },
+                icon: const Icon(Icons.list),
+                label: const Text(
+                  'From Template',
+                  style: TextStyle(fontWeight: FontWeight.w600),
                 ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: OutlinedButton.icon(
-                    onPressed: () {
-                      Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (_) => const RepeatPreviousScreen(),
-                        ),
-                      );
-                    },
-                    icon: const Icon(Icons.history),
-                    label: const Text(
-                      'Repeat Previous',
-                      style: TextStyle(fontWeight: FontWeight.w600),
+              ),
+            ),
+            const SizedBox(height: 16),
+            SizedBox(
+              height: 48,
+              child: OutlinedButton.icon(
+                onPressed: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => const RepeatPreviousScreen(),
                     ),
-                  ),
+                  );
+                },
+                icon: const Icon(Icons.history),
+                label: const Text(
+                  'Repeat Previous',
+                  style: TextStyle(fontWeight: FontWeight.w600),
                 ),
-              ],
+              ),
             ),
             const SizedBox(height: 32),
             const Divider(),
@@ -119,13 +112,19 @@ class LogWorkoutScreen extends StatelessWidget {
   }
 }
 
-enum WorkoutEditorMode { quick, template, repeat }
+enum WorkoutEditorMode { quick, template, repeat, edit }
 
 class WorkoutEditorScreen extends StatefulWidget {
   final WorkoutEditorMode mode;
   final Map<String, dynamic>? initialData;
+  final String? workoutId;
 
-  const WorkoutEditorScreen({super.key, required this.mode, this.initialData});
+  const WorkoutEditorScreen({
+    super.key,
+    required this.mode,
+    this.initialData,
+    this.workoutId,
+  });
 
   @override
   State<WorkoutEditorScreen> createState() => _WorkoutEditorScreenState();
@@ -137,7 +136,7 @@ class _WorkoutEditorScreenState extends State<WorkoutEditorScreen> {
   DateTime _selectedDate = DateTime.now();
   bool _saving = false;
 
-  final List<_ExerciseFieldData> _exercises = [];
+  late List<_ExerciseFormData> _exercises;
 
   @override
   void initState() {
@@ -149,126 +148,113 @@ class _WorkoutEditorScreenState extends State<WorkoutEditorScreen> {
     final data = widget.initialData;
 
     if (data != null) {
-      // For repeat mode: fill from existing workout
       _titleController.text = (data['title'] as String?) ?? '';
       final duration = data['durationMinutes'];
       if (duration != null) {
         _durationController.text = duration.toString();
       }
+
       final ts = data['date'];
       if (ts is Timestamp) {
         _selectedDate = ts.toDate();
+      } else {
+        _selectedDate = DateTime.now();
       }
 
       final rawExercises = (data['exercises'] as List?) ?? [];
-      if (rawExercises.isNotEmpty) {
-        for (final e in rawExercises) {
-          final map = Map<String, dynamic>.from(e as Map);
-          _addExerciseRow(
-            name: map['name'] as String?,
-            sets: (map['sets'] as num?)?.toInt(),
-            reps: (map['reps'] as num?)?.toInt(),
-            weight: (map['weight'] as num?)?.toDouble(),
-            restSeconds: (map['restSeconds'] as num?)?.toInt(),
-          );
-        }
+      _exercises = rawExercises.map((raw) {
+        final m = Map<String, dynamic>.from(raw as Map);
+        return _ExerciseFormData(
+          name: (m['name'] ?? '').toString(),
+          sets: m['sets'] != null ? m['sets'].toString() : '',
+          reps: m['reps'] != null ? m['reps'].toString() : '',
+          weight: m['weight'] != null ? m['weight'].toString() : '',
+          restSeconds: m['restSeconds'] != null
+              ? m['restSeconds'].toString()
+              : '',
+        );
+      }).toList();
+
+      if (_exercises.isEmpty) {
+        _exercises = [_ExerciseFormData()];
       }
+      return;
     }
 
-    // Template mode with no initial data: prefill common workout
-    if (widget.mode == WorkoutEditorMode.template && data == null) {
+    if (widget.mode == WorkoutEditorMode.template) {
       _titleController.text = 'Full Body Strength';
       _durationController.text = '45';
       _selectedDate = DateTime.now();
-
-      _addExerciseRow(
-        name: 'Squats',
-        sets: 4,
-        reps: 8,
-        weight: 95,
-        restSeconds: 90,
-      );
-      _addExerciseRow(
-        name: 'Bench Press',
-        sets: 4,
-        reps: 8,
-        weight: 75,
-        restSeconds: 90,
-      );
-      _addExerciseRow(
-        name: 'Bent-over Rows',
-        sets: 4,
-        reps: 8,
-        weight: 65,
-        restSeconds: 90,
-      );
-      _addExerciseRow(
-        name: 'Shoulder Press',
-        sets: 3,
-        reps: 10,
-        weight: 45,
-        restSeconds: 60,
-      );
-      _addExerciseRow(
-        name: 'Lat Pulldowns',
-        sets: 3,
-        reps: 10,
-        weight: 60,
-        restSeconds: 60,
-      );
-      _addExerciseRow(
-        name: 'Plank',
-        sets: 3,
-        reps: 1,
-        weight: 0,
-        restSeconds: 60,
-      );
-    }
-
-    // Quick mode or anything else with no exercises -> start with one empty row
-    if (_exercises.isEmpty) {
-      _addExerciseRow();
-    }
-  }
-
-  void _addExerciseRow({
-    String? name,
-    int? sets,
-    int? reps,
-    double? weight,
-    int? restSeconds,
-  }) {
-    _exercises.add(
-      _ExerciseFieldData(
-        name: TextEditingController(text: name ?? ''),
-        sets: TextEditingController(text: sets?.toString() ?? ''),
-        reps: TextEditingController(text: reps?.toString() ?? ''),
-        weight: TextEditingController(
-          text: weight != null ? weight.toString() : '',
+      _exercises = [
+        _ExerciseFormData(
+          name: 'Squats',
+          sets: '4',
+          reps: '8',
+          weight: '',
+          restSeconds: '90',
         ),
-        rest: TextEditingController(
-          text: restSeconds != null ? restSeconds.toString() : '',
+        _ExerciseFormData(
+          name: 'Bench Press',
+          sets: '4',
+          reps: '8',
+          weight: '',
+          restSeconds: '90',
         ),
-      ),
-    );
-    setState(() {});
-  }
-
-  void _removeExerciseRow(int index) {
-    if (_exercises.length == 1) return; // keep at least one row
-    final row = _exercises.removeAt(index);
-    row.dispose();
-    setState(() {});
+        _ExerciseFormData(
+          name: 'Bent-over Rows',
+          sets: '4',
+          reps: '8',
+          weight: '',
+          restSeconds: '90',
+        ),
+        _ExerciseFormData(
+          name: 'Shoulder Press',
+          sets: '3',
+          reps: '10',
+          weight: '',
+          restSeconds: '60',
+        ),
+      ];
+    } else {
+      _selectedDate = DateTime.now();
+      _exercises = [_ExerciseFormData()];
+    }
   }
 
   @override
   void dispose() {
     _titleController.dispose();
     _durationController.dispose();
-    for (final e in _exercises) {
-      e.dispose();
-    }
     super.dispose();
+  }
+
+  Future<void> _pickDate() async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _selectedDate,
+      firstDate: DateTime(2020),
+      lastDate: DateTime(2100),
+    );
+    if (picked != null) {
+      setState(() {
+        _selectedDate = picked;
+      });
+    }
+  }
+
+  void _addExercise() {
+    setState(() {
+      _exercises.add(_ExerciseFormData());
+    });
+  }
+
+  void _removeExercise(int index) {
+    setState(() {
+      _exercises.removeAt(index);
+      if (_exercises.isEmpty) {
+        _exercises.add(_ExerciseFormData());
+      }
+    });
   }
 
   Future<void> _saveWorkout() async {
@@ -288,40 +274,33 @@ class _WorkoutEditorScreenState extends State<WorkoutEditorScreen> {
       return;
     }
 
-    // Build exercises list from rows
-    final List<Map<String, dynamic>> exercises = [];
-    for (final row in _exercises) {
-      final name = row.name.text.trim();
-      if (name.isEmpty) continue;
-
-      final sets = int.tryParse(row.sets.text.trim()) ?? 0;
-      final reps = int.tryParse(row.reps.text.trim()) ?? 0;
-      final weight = double.tryParse(row.weight.text.trim()) ?? 0.0;
-      final restSeconds = row.rest.text.trim().isNotEmpty
-          ? int.tryParse(row.rest.text.trim())
-          : null;
-
-      exercises.add({
-        'name': name,
-        'sets': sets,
-        'reps': reps,
-        'weight': weight,
-        'restSeconds': restSeconds,
-      });
-    }
-
-    if (exercises.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Add at least one exercise before saving.'),
-        ),
-      );
-      return;
-    }
-
     int? durationMinutes;
     if (_durationController.text.trim().isNotEmpty) {
       durationMinutes = int.tryParse(_durationController.text.trim());
+    }
+
+    final exerciseMaps = _exercises.where((e) => e.name.trim().isNotEmpty).map((
+      e,
+    ) {
+      final sets = int.tryParse(e.sets.trim());
+      final reps = int.tryParse(e.reps.trim());
+      final weight = double.tryParse(e.weight.trim());
+      final rest = int.tryParse(e.restSeconds.trim());
+
+      return <String, dynamic>{
+        'name': e.name.trim(),
+        'sets': sets ?? 0,
+        'reps': reps ?? 0,
+        'weight': weight ?? 0.0,
+        'restSeconds': e.restSeconds.trim().isEmpty ? null : rest,
+      };
+    }).toList();
+
+    if (exerciseMaps.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Add at least one exercise.')),
+      );
+      return;
     }
 
     setState(() {
@@ -341,26 +320,23 @@ class _WorkoutEditorScreenState extends State<WorkoutEditorScreen> {
           'Beast Mode Athlete';
       final goal = profile?['goal'] as String?;
 
-      // simple "notes" summary for feed/history
-      final exerciseNames = exercises.map((e) => e['name'] as String).toList();
-      final notes = exerciseNames.isEmpty
-          ? null
-          : (exerciseNames.length <= 3
-                ? exerciseNames.join(', ')
-                : '${exerciseNames.take(3).join(', ')} + more');
-
       final workoutsRef = FirebaseFirestore.instance.collection('workouts');
-      await workoutsRef.add({
+      final payload = {
         'userId': user.uid,
         'title': title,
-        'notes': notes,
         'date': Timestamp.fromDate(_selectedDate),
         'durationMinutes': durationMinutes,
         'createdAt': Timestamp.fromDate(DateTime.now()),
         'userName': displayName,
         'userGoal': goal,
-        'exercises': exercises,
-      });
+        'exercises': exerciseMaps,
+      };
+
+      if (widget.mode == WorkoutEditorMode.edit && widget.workoutId != null) {
+        await workoutsRef.doc(widget.workoutId!).update(payload);
+      } else {
+        await workoutsRef.add(payload);
+      }
 
       if (!mounted) return;
       Navigator.pop(context);
@@ -377,32 +353,21 @@ class _WorkoutEditorScreenState extends State<WorkoutEditorScreen> {
     }
   }
 
-  Future<void> _pickDate() async {
-    final picked = await showDatePicker(
-      context: context,
-      initialDate: _selectedDate,
-      firstDate: DateTime(2020),
-      lastDate: DateTime(2100),
-    );
-    if (picked != null) {
-      setState(() {
-        _selectedDate = picked;
-      });
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     String title;
     switch (widget.mode) {
       case WorkoutEditorMode.quick:
-        title = 'Add Workout';
+        title = 'Quick Log';
         break;
       case WorkoutEditorMode.template:
         title = 'Template Workout';
         break;
       case WorkoutEditorMode.repeat:
         title = 'Repeat Workout';
+        break;
+      case WorkoutEditorMode.edit:
+        title = 'Edit Workout';
         break;
     }
 
@@ -496,101 +461,173 @@ class _WorkoutEditorScreenState extends State<WorkoutEditorScreen> {
               style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
             ),
             const SizedBox(height: 8),
-
-            // dynamic exercise rows
-            ...List.generate(_exercises.length, (index) {
-              final row = _exercises[index];
-              return Container(
-                margin: const EdgeInsets.only(bottom: 12),
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  border: Border.all(color: Colors.grey[300]!),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Column(
-                  children: [
-                    Row(
-                      children: [
-                        Expanded(
-                          child: TextField(
-                            controller: row.name,
-                            decoration: const InputDecoration(
-                              labelText: 'Exercise',
+            Column(
+              children: List.generate(_exercises.length, (index) {
+                final ex = _exercises[index];
+                return Container(
+                  margin: const EdgeInsets.only(bottom: 12),
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    border: Border.all(color: Colors.grey[300]!),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Text(
+                            'Exercise ${index + 1}',
+                            style: const TextStyle(
+                              fontWeight: FontWeight.w600,
+                              fontSize: 14,
                             ),
                           ),
-                        ),
-                        const SizedBox(width: 8),
-                        if (_exercises.length > 1)
-                          IconButton(
-                            onPressed: () => _removeExerciseRow(index),
-                            icon: const Icon(Icons.remove_circle_outline),
+                          const Spacer(),
+                          if (_exercises.length > 1)
+                            IconButton(
+                              icon: const Icon(Icons.delete_outline),
+                              onPressed: () => _removeExercise(index),
+                              splashRadius: 18,
+                            ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      TextFormField(
+                        initialValue: ex.name,
+                        onChanged: (v) => ex.name = v,
+                        decoration: InputDecoration(
+                          hintText: 'Squats, Bench Press...',
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                            borderSide: const BorderSide(color: Colors.grey),
                           ),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: TextField(
-                            controller: row.sets,
-                            keyboardType: TextInputType.number,
-                            decoration: const InputDecoration(
-                              labelText: 'Sets',
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                            borderSide: const BorderSide(color: Colors.grey),
+                          ),
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 12,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: TextFormField(
+                              initialValue: ex.sets,
+                              onChanged: (v) => ex.sets = v,
+                              keyboardType: TextInputType.number,
+                              decoration: InputDecoration(
+                                labelText: 'Sets',
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                  borderSide: const BorderSide(
+                                    color: Colors.grey,
+                                  ),
+                                ),
+                                enabledBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                  borderSide: const BorderSide(
+                                    color: Colors.grey,
+                                  ),
+                                ),
+                              ),
                             ),
                           ),
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: TextField(
-                            controller: row.reps,
-                            keyboardType: TextInputType.number,
-                            decoration: const InputDecoration(
-                              labelText: 'Reps',
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: TextFormField(
+                              initialValue: ex.reps,
+                              onChanged: (v) => ex.reps = v,
+                              keyboardType: TextInputType.number,
+                              decoration: InputDecoration(
+                                labelText: 'Reps',
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                  borderSide: const BorderSide(
+                                    color: Colors.grey,
+                                  ),
+                                ),
+                                enabledBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                  borderSide: const BorderSide(
+                                    color: Colors.grey,
+                                  ),
+                                ),
+                              ),
                             ),
                           ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: TextField(
-                            controller: row.weight,
-                            keyboardType: TextInputType.number,
-                            decoration: const InputDecoration(
-                              labelText: 'Weight',
-                              suffixText: 'lb',
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: TextFormField(
+                              initialValue: ex.weight,
+                              onChanged: (v) => ex.weight = v,
+                              keyboardType: TextInputType.number,
+                              decoration: InputDecoration(
+                                labelText: 'Weight',
+                                hintText: 'lbs or kg',
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                  borderSide: const BorderSide(
+                                    color: Colors.grey,
+                                  ),
+                                ),
+                                enabledBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                  borderSide: const BorderSide(
+                                    color: Colors.grey,
+                                  ),
+                                ),
+                              ),
                             ),
                           ),
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: TextField(
-                            controller: row.rest,
-                            keyboardType: TextInputType.number,
-                            decoration: const InputDecoration(
-                              labelText: 'Rest',
-                              suffixText: 's',
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: TextFormField(
+                              initialValue: ex.restSeconds,
+                              onChanged: (v) => ex.restSeconds = v,
+                              keyboardType: TextInputType.number,
+                              decoration: InputDecoration(
+                                labelText: 'Rest (sec)',
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                  borderSide: const BorderSide(
+                                    color: Colors.grey,
+                                  ),
+                                ),
+                                enabledBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                  borderSide: const BorderSide(
+                                    color: Colors.grey,
+                                  ),
+                                ),
+                              ),
                             ),
                           ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              );
-            }),
+                        ],
+                      ),
+                    ],
+                  ),
+                );
+              }),
+            ),
             const SizedBox(height: 8),
             Align(
               alignment: Alignment.centerLeft,
               child: TextButton.icon(
-                onPressed: () => _addExerciseRow(),
+                onPressed: _addExercise,
                 icon: const Icon(Icons.add),
                 label: const Text('Add Exercise'),
               ),
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: 32),
             SizedBox(
               width: double.infinity,
               height: 50,
@@ -628,28 +665,20 @@ class _WorkoutEditorScreenState extends State<WorkoutEditorScreen> {
   }
 }
 
-class _ExerciseFieldData {
-  final TextEditingController name;
-  final TextEditingController sets;
-  final TextEditingController reps;
-  final TextEditingController weight;
-  final TextEditingController rest;
+class _ExerciseFormData {
+  String name;
+  String sets;
+  String reps;
+  String weight;
+  String restSeconds;
 
-  _ExerciseFieldData({
-    required this.name,
-    required this.sets,
-    required this.reps,
-    required this.weight,
-    required this.rest,
+  _ExerciseFormData({
+    this.name = '',
+    this.sets = '',
+    this.reps = '',
+    this.weight = '',
+    this.restSeconds = '',
   });
-
-  void dispose() {
-    name.dispose();
-    sets.dispose();
-    reps.dispose();
-    weight.dispose();
-    rest.dispose();
-  }
 }
 
 class RepeatPreviousScreen extends StatelessWidget {
@@ -732,7 +761,14 @@ class RepeatPreviousScreen extends StatelessWidget {
               }
 
               final dateLabel = '${date.month}/${date.day}/${date.year}';
+
+              final exercises = (data['exercises'] as List?) ?? [];
+              final exerciseCount = exercises.length;
+
               String subtitle = dateLabel;
+              if (exerciseCount > 0) {
+                subtitle += ' • $exerciseCount exercises';
+              }
               if (duration != null) {
                 subtitle += ' • $duration min';
               }
