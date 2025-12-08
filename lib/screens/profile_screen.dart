@@ -10,7 +10,7 @@ import 'settings_screen.dart';
 import 'login_screen.dart';
 
 class ProfileScreen extends StatelessWidget {
-  const ProfileScreen({Key? key}) : super(key: key);
+  const ProfileScreen({super.key});
 
   Future<void> _handleLogout(BuildContext context) async {
     final auth = AuthService();

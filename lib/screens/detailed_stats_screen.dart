@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 class DetailedStatsScreen extends StatefulWidget {
-  const DetailedStatsScreen({Key? key}) : super(key: key);
+  const DetailedStatsScreen({super.key});
 
   @override
   State<DetailedStatsScreen> createState() => _DetailedStatsScreenState();
@@ -65,15 +65,12 @@ class _DetailedStatsScreenState extends State<DetailedStatsScreen> {
                     ),
                   ),
                   const SizedBox(height: 24),
-                  Container(
+                  SizedBox(
                     height: 150,
                     child: Center(
                       child: Text(
                         'Bar Chart',
-                        style: TextStyle(
-                          color: Colors.grey[400],
-                          fontSize: 16,
-                        ),
+                        style: TextStyle(color: Colors.grey[400], fontSize: 16),
                       ),
                     ),
                   ),
@@ -101,15 +98,12 @@ class _DetailedStatsScreenState extends State<DetailedStatsScreen> {
                     ),
                   ),
                   const SizedBox(height: 24),
-                  Container(
+                  SizedBox(
                     height: 150,
                     child: Center(
                       child: Text(
                         'Line Chart',
-                        style: TextStyle(
-                          color: Colors.grey[400],
-                          fontSize: 16,
-                        ),
+                        style: TextStyle(color: Colors.grey[400], fontSize: 16),
                       ),
                     ),
                   ),
@@ -137,15 +131,12 @@ class _DetailedStatsScreenState extends State<DetailedStatsScreen> {
                     ),
                   ),
                   const SizedBox(height: 24),
-                  Container(
+                  SizedBox(
                     height: 150,
                     child: Center(
                       child: Text(
                         'Pie Chart',
-                        style: TextStyle(
-                          color: Colors.grey[400],
-                          fontSize: 16,
-                        ),
+                        style: TextStyle(color: Colors.grey[400], fontSize: 16),
                       ),
                     ),
                   ),
@@ -224,19 +215,10 @@ class _DetailedStatsScreenState extends State<DetailedStatsScreen> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(
-            label,
-            style: const TextStyle(
-              fontSize: 16,
-              color: Colors.grey,
-            ),
-          ),
+          Text(label, style: const TextStyle(fontSize: 16, color: Colors.grey)),
           Text(
             value,
-            style: const TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-            ),
+            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
           ),
         ],
       ),
@@ -246,9 +228,7 @@ class _DetailedStatsScreenState extends State<DetailedStatsScreen> {
   Widget _buildBottomNavigationBar(BuildContext context, int currentIndex) {
     return Container(
       decoration: BoxDecoration(
-        border: Border(
-          top: BorderSide(color: Colors.grey[300]!, width: 1),
-        ),
+        border: Border(top: BorderSide(color: Colors.grey[300]!, width: 1)),
       ),
       child: BottomNavigationBar(
         currentIndex: currentIndex,
@@ -258,10 +238,7 @@ class _DetailedStatsScreenState extends State<DetailedStatsScreen> {
         showSelectedLabels: true,
         showUnselectedLabels: true,
         items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.home),
-            label: 'Feed',
-          ),
+          BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Feed'),
           BottomNavigationBarItem(
             icon: Icon(Icons.fitness_center),
             label: 'Log',
@@ -274,10 +251,7 @@ class _DetailedStatsScreenState extends State<DetailedStatsScreen> {
             icon: Icon(Icons.bar_chart),
             label: 'Dashboard',
           ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.person),
-            label: 'Profile',
-          ),
+          BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profile'),
         ],
       ),
     );

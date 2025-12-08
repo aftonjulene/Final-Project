@@ -1,7 +1,9 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
 class WorkoutHistoryScreen extends StatefulWidget {
-  const WorkoutHistoryScreen({Key? key}) : super(key: key);
+  const WorkoutHistoryScreen({super.key});
 
   @override
   State<WorkoutHistoryScreen> createState() => _WorkoutHistoryScreenState();
@@ -10,60 +12,92 @@ class WorkoutHistoryScreen extends StatefulWidget {
 class _WorkoutHistoryScreenState extends State<WorkoutHistoryScreen> {
   final TextEditingController _searchController = TextEditingController();
 
-  // Mock workout history data
-  final List<Map<String, dynamic>> workouts = [
-    {
-      'name': 'Leg Day',
-      'date': 'Nov 19, 2025',
-      'exercises': 3,
-      'duration': 45,
-      'section': 'THIS WEEK'
-    },
-    {
-      'name': 'Push Day',
-      'date': 'Nov 18, 2025',
-      'exercises': 4,
-      'duration': 45,
-      'section': 'THIS WEEK'
-    },
-    {
-      'name': 'Pull Day',
-      'date': 'Nov 17, 2025',
-      'exercises': 5,
-      'duration': 45,
-      'section': 'THIS WEEK'
-    },
-    {
-      'name': 'Chest Day',
-      'date': 'Nov 12, 2025',
-      'exercises': 4,
-      'duration': 50,
-      'section': 'LAST WEEK'
-    },
-    {
-      'name': 'Back Day',
-      'date': 'Nov 11, 2025',
-      'exercises': 5,
-      'duration': 55,
-      'section': 'LAST WEEK'
-    },
-  ];
-
   @override
   void dispose() {
     _searchController.dispose();
     super.dispose();
   }
 
+  Stream<QuerySnapshot<Map<String, dynamic>>> _userWorkoutsStream(String uid) {
+    return FirebaseFirestore.instance
+        .collection('workouts')
+        .where('userId', isEqualTo: uid)
+        .orderBy('date', descending: true)
+        .snapshots();
+  }
+
+  Future<void> _deleteWorkout(BuildContext context, String workoutId) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) {
+        return AlertDialog(
+          title: const Text('Delete workout?'),
+          content: const Text(
+            'This will permanently delete this workout from your history.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(false),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(true),
+              child: const Text('Delete', style: TextStyle(color: Colors.red)),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (confirm != true) return;
+
+    try {
+      await FirebaseFirestore.instance
+          .collection('workouts')
+          .doc(workoutId)
+          .delete();
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Workout deleted.')));
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Failed to delete workout.')),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    final user = FirebaseAuth.instance.currentUser;
+
+    if (user == null) {
+      return Scaffold(
+        appBar: AppBar(
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back),
+            onPressed: () => Navigator.pop(context),
+          ),
+          title: const Text(
+            'Workout History',
+            style: TextStyle(fontWeight: FontWeight.w600),
+          ),
+          backgroundColor: Colors.white,
+          elevation: 0,
+          foregroundColor: Colors.black,
+        ),
+        body: const Center(
+          child: Text('Please log in to view workout history.'),
+        ),
+      );
+    }
+
     return Scaffold(
       appBar: AppBar(
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
-          onPressed: () {
-            Navigator.pop(context);
-          },
+          onPressed: () => Navigator.pop(context),
         ),
         title: const Text(
           'Workout History',
@@ -75,240 +109,156 @@ class _WorkoutHistoryScreenState extends State<WorkoutHistoryScreen> {
       ),
       body: Column(
         children: [
-          // Search bar and filter
+          // Search bar
           Padding(
             padding: const EdgeInsets.all(16.0),
-            child: Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: _searchController,
-                    decoration: InputDecoration(
-                      hintText: 'Search workouts...',
-                      prefixIcon: const Icon(Icons.search),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8),
-                        borderSide: BorderSide(color: Colors.grey[300]!),
-                      ),
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8),
-                        borderSide: BorderSide(color: Colors.grey[300]!),
-                      ),
-                      contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 12,
-                      ),
-                    ),
-                  ),
+            child: TextField(
+              controller: _searchController,
+              decoration: InputDecoration(
+                hintText: 'Search workouts...',
+                prefixIcon: const Icon(Icons.search),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  borderSide: BorderSide(color: Colors.grey[300]!),
                 ),
-                const SizedBox(width: 12),
-                Container(
-                  decoration: BoxDecoration(
-                    border: Border.all(color: Colors.grey[300]!),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: IconButton(
-                    icon: const Icon(Icons.filter_list),
-                    onPressed: () {
-                      _showFilterOptions(context);
-                    },
-                  ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  borderSide: BorderSide(color: Colors.grey[300]!),
                 ),
-              ],
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 12,
+                ),
+              ),
+              onChanged: (_) {
+                setState(() {});
+              },
             ),
           ),
-          // Workout list
           Expanded(
-            child: ListView.builder(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              itemCount: workouts.length + 2, // +2 for section headers
-              itemBuilder: (context, index) {
-                if (index == 0) {
-                  return _buildSectionHeader('THIS WEEK');
-                } else if (index <= 3) {
-                  return _buildWorkoutCard(workouts[index - 1]);
-                } else if (index == 4) {
-                  return _buildSectionHeader('LAST WEEK');
-                } else {
-                  return _buildWorkoutCard(workouts[index - 2]);
+            child: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+              stream: _userWorkoutsStream(user.uid),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  );
                 }
+
+                if (snapshot.hasError) {
+                  return const Center(child: Text('Failed to load workouts.'));
+                }
+
+                final docs = snapshot.data?.docs ?? [];
+                if (docs.isEmpty) {
+                  return const Center(child: Text('No workouts logged yet.'));
+                }
+
+                final query = _searchController.text.trim().toLowerCase();
+                final filteredDocs = query.isEmpty
+                    ? docs
+                    : docs.where((doc) {
+                        final data = doc.data();
+                        final title =
+                            (data['title'] as String?)?.toLowerCase() ?? '';
+                        final notes =
+                            (data['notes'] as String?)?.toLowerCase() ?? '';
+                        return title.contains(query) || notes.contains(query);
+                      }).toList();
+
+                if (filteredDocs.isEmpty) {
+                  return const Center(
+                    child: Text('No workouts match your search.'),
+                  );
+                }
+
+                return ListView.builder(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  itemCount: filteredDocs.length,
+                  itemBuilder: (context, index) {
+                    final doc = filteredDocs[index];
+                    return _buildWorkoutCard(
+                      context: context,
+                      docId: doc.id,
+                      data: doc.data(),
+                    );
+                  },
+                );
               },
             ),
           ),
         ],
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          // Add new workout
-        },
-        backgroundColor: const Color(0xFF1a1d2e),
-        child: const Icon(Icons.add, color: Colors.white),
-      ),
-      bottomNavigationBar: _buildBottomNavigationBar(context, 1),
     );
   }
 
-  Widget _buildSectionHeader(String title) {
-    return Padding(
-      padding: const EdgeInsets.only(top: 8, bottom: 12),
-      child: Text(
-        title,
-        style: const TextStyle(
-          fontSize: 12,
-          fontWeight: FontWeight.bold,
-          color: Colors.grey,
-          letterSpacing: 1.2,
-        ),
-      ),
-    );
-  }
+  Widget _buildWorkoutCard({
+    required BuildContext context,
+    required String docId,
+    required Map<String, dynamic> data,
+  }) {
+    final title = (data['title'] as String?) ?? 'Workout';
+    final duration = data['durationMinutes'] as int?;
+    final ts = data['date'];
+    DateTime date;
+    if (ts is Timestamp) {
+      date = ts.toDate();
+    } else {
+      date = DateTime.now();
+    }
 
-  Widget _buildWorkoutCard(Map<String, dynamic> workout) {
+    final dateLabel = '${date.month}/${date.day}/${date.year}';
+
+    String subtitle = dateLabel;
+    if (duration != null) {
+      subtitle += ' • $duration min';
+    }
+
+    final notes = data['notes'] as String?;
+    final hasNotes = notes != null && notes.trim().isNotEmpty;
+
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         border: Border.all(color: Colors.grey[300]!),
         borderRadius: BorderRadius.circular(8),
       ),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Left: title + details
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  workout['name'],
+                  title,
                   style: const TextStyle(
                     fontSize: 16,
-                    fontWeight: FontWeight.bold,
+                    fontWeight: FontWeight.w600,
                   ),
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  '${workout['date']} • ${workout['exercises']} exercises',
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: Colors.grey[600],
-                  ),
+                  subtitle,
+                  style: TextStyle(fontSize: 14, color: Colors.grey[600]),
                 ),
+                if (hasNotes) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    notes!,
+                    style: TextStyle(fontSize: 13, color: Colors.grey[700]),
+                  ),
+                ],
               ],
             ),
           ),
-          Text(
-            '${workout['duration']} min',
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
-              color: Colors.grey[700],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showFilterOptions(BuildContext context) {
-    showModalBottomSheet(
-      context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-      ),
-      builder: (BuildContext context) {
-        return SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Padding(
-                  padding: EdgeInsets.all(8.0),
-                  child: Text(
-                    'Filter Workouts',
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-                ListTile(
-                  title: const Text('All Workouts'),
-                  onTap: () {
-                    Navigator.pop(context);
-                  },
-                ),
-                ListTile(
-                  title: const Text('This Week'),
-                  onTap: () {
-                    Navigator.pop(context);
-                  },
-                ),
-                ListTile(
-                  title: const Text('This Month'),
-                  onTap: () {
-                    Navigator.pop(context);
-                  },
-                ),
-                ListTile(
-                  title: const Text('Custom Range'),
-                  onTap: () {
-                    Navigator.pop(context);
-                  },
-                ),
-                const SizedBox(height: 8),
-                SizedBox(
-                  width: double.infinity,
-                  child: TextButton(
-                    onPressed: () {
-                      Navigator.pop(context);
-                    },
-                    child: const Text('Cancel'),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        );
-      },
-    );
-  }
-
-  Widget _buildBottomNavigationBar(BuildContext context, int currentIndex) {
-    return Container(
-      decoration: BoxDecoration(
-        border: Border(
-          top: BorderSide(color: Colors.grey[300]!, width: 1),
-        ),
-      ),
-      child: BottomNavigationBar(
-        currentIndex: currentIndex,
-        type: BottomNavigationBarType.fixed,
-        selectedItemColor: const Color(0xFF1a1d2e),
-        unselectedItemColor: Colors.grey,
-        showSelectedLabels: true,
-        showUnselectedLabels: true,
-        items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.home),
-            label: 'Feed',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.fitness_center),
-            label: 'Log',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.emoji_events),
-            label: 'Challenges',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.bar_chart),
-            label: 'Dashboard',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.person),
-            label: 'Profile',
+          const SizedBox(width: 8),
+          // Right: delete icon
+          IconButton(
+            icon: const Icon(Icons.delete_outline, color: Colors.red),
+            onPressed: () => _deleteWorkout(context, docId),
           ),
         ],
       ),

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 class PhotoJournalScreen extends StatelessWidget {
-  const PhotoJournalScreen({Key? key}) : super(key: key);
+  const PhotoJournalScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -78,19 +78,13 @@ class PhotoJournalScreen extends StatelessWidget {
             ? Center(
                 child: Text(
                   photo['date'],
-                  style: const TextStyle(
-                    fontSize: 14,
-                    color: Colors.grey,
-                  ),
+                  style: const TextStyle(fontSize: 14, color: Colors.grey),
                 ),
               )
             : Center(
                 child: Text(
                   'Image',
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: Colors.grey[400],
-                  ),
+                  style: TextStyle(fontSize: 14, color: Colors.grey[400]),
                 ),
               ),
       ),
@@ -147,9 +141,7 @@ class PhotoJournalScreen extends StatelessWidget {
   Widget _buildBottomNavigationBar(BuildContext context, int currentIndex) {
     return Container(
       decoration: BoxDecoration(
-        border: Border(
-          top: BorderSide(color: Colors.grey[300]!, width: 1),
-        ),
+        border: Border(top: BorderSide(color: Colors.grey[300]!, width: 1)),
       ),
       child: BottomNavigationBar(
         currentIndex: currentIndex,
@@ -159,10 +151,7 @@ class PhotoJournalScreen extends StatelessWidget {
         showSelectedLabels: true,
         showUnselectedLabels: true,
         items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.home),
-            label: 'Feed',
-          ),
+          BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Feed'),
           BottomNavigationBarItem(
             icon: Icon(Icons.fitness_center),
             label: 'Log',
@@ -175,10 +164,7 @@ class PhotoJournalScreen extends StatelessWidget {
             icon: Icon(Icons.bar_chart),
             label: 'Dashboard',
           ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.person),
-            label: 'Profile',
-          ),
+          BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profile'),
         ],
       ),
     );

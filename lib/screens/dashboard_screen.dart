@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 class DashboardScreen extends StatelessWidget {
-  const DashboardScreen({Key? key}) : super(key: key);
+  const DashboardScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -102,15 +102,12 @@ class DashboardScreen extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 24),
-                  Container(
+                  SizedBox(
                     height: 150,
                     child: Center(
                       child: Text(
                         'Bar Chart',
-                        style: TextStyle(
-                          color: Colors.grey[400],
-                          fontSize: 16,
-                        ),
+                        style: TextStyle(color: Colors.grey[400], fontSize: 16),
                       ),
                     ),
                   ),
@@ -118,13 +115,34 @@ class DashboardScreen extends StatelessWidget {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceAround,
                     children: const [
-                      Text('Mon', style: TextStyle(fontSize: 12, color: Colors.grey)),
-                      Text('Tue', style: TextStyle(fontSize: 12, color: Colors.grey)),
-                      Text('Wed', style: TextStyle(fontSize: 12, color: Colors.grey)),
-                      Text('Thu', style: TextStyle(fontSize: 12, color: Colors.grey)),
-                      Text('Fri', style: TextStyle(fontSize: 12, color: Colors.grey)),
-                      Text('Sat', style: TextStyle(fontSize: 12, color: Colors.grey)),
-                      Text('Sun', style: TextStyle(fontSize: 12, color: Colors.grey)),
+                      Text(
+                        'Mon',
+                        style: TextStyle(fontSize: 12, color: Colors.grey),
+                      ),
+                      Text(
+                        'Tue',
+                        style: TextStyle(fontSize: 12, color: Colors.grey),
+                      ),
+                      Text(
+                        'Wed',
+                        style: TextStyle(fontSize: 12, color: Colors.grey),
+                      ),
+                      Text(
+                        'Thu',
+                        style: TextStyle(fontSize: 12, color: Colors.grey),
+                      ),
+                      Text(
+                        'Fri',
+                        style: TextStyle(fontSize: 12, color: Colors.grey),
+                      ),
+                      Text(
+                        'Sat',
+                        style: TextStyle(fontSize: 12, color: Colors.grey),
+                      ),
+                      Text(
+                        'Sun',
+                        style: TextStyle(fontSize: 12, color: Colors.grey),
+                      ),
                     ],
                   ),
                 ],
@@ -153,15 +171,12 @@ class DashboardScreen extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 24),
-                  Container(
+                  SizedBox(
                     height: 150,
                     child: Center(
                       child: Text(
                         'Line Chart',
-                        style: TextStyle(
-                          color: Colors.grey[400],
-                          fontSize: 16,
-                        ),
+                        style: TextStyle(color: Colors.grey[400], fontSize: 16),
                       ),
                     ),
                   ),
@@ -169,10 +184,22 @@ class DashboardScreen extends StatelessWidget {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: const [
-                      Text('Week 1', style: TextStyle(fontSize: 12, color: Colors.grey)),
-                      Text('Week 2', style: TextStyle(fontSize: 12, color: Colors.grey)),
-                      Text('Week 3', style: TextStyle(fontSize: 12, color: Colors.grey)),
-                      Text('Week 4', style: TextStyle(fontSize: 12, color: Colors.grey)),
+                      Text(
+                        'Week 1',
+                        style: TextStyle(fontSize: 12, color: Colors.grey),
+                      ),
+                      Text(
+                        'Week 2',
+                        style: TextStyle(fontSize: 12, color: Colors.grey),
+                      ),
+                      Text(
+                        'Week 3',
+                        style: TextStyle(fontSize: 12, color: Colors.grey),
+                      ),
+                      Text(
+                        'Week 4',
+                        style: TextStyle(fontSize: 12, color: Colors.grey),
+                      ),
                     ],
                   ),
                 ],
@@ -209,19 +236,10 @@ class DashboardScreen extends StatelessWidget {
           const SizedBox(height: 12),
           Text(
             value,
-            style: const TextStyle(
-              fontSize: 32,
-              fontWeight: FontWeight.bold,
-            ),
+            style: const TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 4),
-          Text(
-            label,
-            style: const TextStyle(
-              fontSize: 14,
-              color: Colors.grey,
-            ),
-          ),
+          Text(label, style: const TextStyle(fontSize: 14, color: Colors.grey)),
         ],
       ),
     );

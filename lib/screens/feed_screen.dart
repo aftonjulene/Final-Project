@@ -1,38 +1,19 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 
 class FeedScreen extends StatelessWidget {
-  const FeedScreen({Key? key}) : super(key: key);
+  const FeedScreen({super.key});
+
+  Stream<QuerySnapshot<Map<String, dynamic>>> _feedStream() {
+    return FirebaseFirestore.instance
+        .collection('workouts')
+        .orderBy('date', descending: true)
+        .limit(30)
+        .snapshots();
+  }
 
   @override
   Widget build(BuildContext context) {
-    // Mock feed data
-    final List<Map<String, dynamic>> feedPosts = [
-      {
-        'user': 'Alex Chen',
-        'time': '2 hours ago',
-        'workout': 'Morning Run',
-        'details': '5km in 28 minutes',
-        'likes': 12,
-        'comments': 3,
-      },
-      {
-        'user': 'Sarah Martinez',
-        'time': '2 hours ago',
-        'workout': 'Leg Day',
-        'details': '6 exercises • 45 minutes',
-        'likes': 24,
-        'comments': 7,
-      },
-      {
-        'user': 'Mike Johnson',
-        'time': '2 hours ago',
-        'workout': 'Upper Body',
-        'details': 'Bench press PR: 100kg!',
-        'likes': 45,
-        'comments': 12,
-      },
-    ];
-
     return Scaffold(
       appBar: AppBar(
         title: const Text(
@@ -43,18 +24,62 @@ class FeedScreen extends StatelessWidget {
         elevation: 0,
         foregroundColor: Colors.black,
       ),
-      body: ListView.builder(
-        padding: const EdgeInsets.all(16.0),
-        itemCount: feedPosts.length,
-        itemBuilder: (context, index) {
-          return _buildFeedCard(feedPosts[index]);
+      body: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+        stream: _feedStream(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(
+              child: CircularProgressIndicator(strokeWidth: 2),
+            );
+          }
+
+          if (snapshot.hasError) {
+            return const Center(child: Text('Could not load feed.'));
+          }
+
+          final docs = snapshot.data?.docs ?? [];
+          if (docs.isEmpty) {
+            return const Center(child: Text('No workouts in the feed yet.'));
+          }
+
+          return ListView.builder(
+            padding: const EdgeInsets.all(16.0),
+            itemCount: docs.length,
+            itemBuilder: (context, index) {
+              final data = docs[index].data();
+              return _buildFeedCard(data);
+            },
+          );
         },
       ),
-      // Bottom navigation removed - handled by MainNavigation
     );
   }
 
-  Widget _buildFeedCard(Map<String, dynamic> post) {
+  Widget _buildFeedCard(Map<String, dynamic> data) {
+    final userName = (data['userName'] as String?) ?? 'Beast Mode Athlete';
+    final goal = data['userGoal'] as String?;
+    final title = (data['title'] as String?) ?? 'Workout';
+    final notes = (data['notes'] as String?) ?? '';
+    final duration = data['durationMinutes'] as int?;
+
+    DateTime date;
+    final ts = data['date'];
+    if (ts is Timestamp) {
+      date = ts.toDate();
+    } else {
+      date = DateTime.now();
+    }
+
+    final dateLabel = '${date.month}/${date.day}/${date.year}';
+
+    String subtitle = '$dateLabel';
+    if (duration != null) {
+      subtitle += ' • $duration min';
+    }
+    if (goal != null && goal.isNotEmpty) {
+      subtitle += ' • $goal';
+    }
+
     return Card(
       margin: const EdgeInsets.only(bottom: 16),
       elevation: 0,
@@ -67,14 +92,14 @@ class FeedScreen extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // User info
+            // user + date
             Row(
               children: [
                 CircleAvatar(
                   radius: 20,
                   backgroundColor: Colors.grey[300],
                   child: Text(
-                    post['user'][0],
+                    userName.isNotEmpty ? userName[0].toUpperCase() : 'B',
                     style: const TextStyle(
                       fontWeight: FontWeight.bold,
                       color: Colors.grey,
@@ -87,18 +112,15 @@ class FeedScreen extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        post['user'],
+                        userName,
                         style: const TextStyle(
                           fontWeight: FontWeight.bold,
                           fontSize: 16,
                         ),
                       ),
                       Text(
-                        post['time'],
-                        style: TextStyle(
-                          color: Colors.grey[600],
-                          fontSize: 12,
-                        ),
+                        subtitle,
+                        style: TextStyle(color: Colors.grey[600], fontSize: 12),
                       ),
                     ],
                   ),
@@ -106,50 +128,47 @@ class FeedScreen extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 16),
-            // Workout details
             Text(
-              post['workout'],
-              style: const TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-              ),
+              title,
+              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
-            const SizedBox(height: 4),
-            Text(
-              post['details'],
-              style: TextStyle(
-                fontSize: 14,
-                color: Colors.grey[700],
+            if (notes.isNotEmpty) ...[
+              const SizedBox(height: 4),
+              Text(
+                notes,
+                style: TextStyle(fontSize: 14, color: Colors.grey[700]),
               ),
-            ),
+            ],
             const SizedBox(height: 16),
-            // Like and comment buttons
+            // placeholders for likes/comments if you want to wire them later
             Row(
               children: [
                 Row(
                   children: [
-                    Icon(Icons.favorite_border, size: 20, color: Colors.grey[600]),
+                    Icon(
+                      Icons.favorite_border,
+                      size: 20,
+                      color: Colors.grey[600],
+                    ),
                     const SizedBox(width: 4),
                     Text(
-                      '${post['likes']}',
-                      style: TextStyle(
-                        color: Colors.grey[600],
-                        fontSize: 14,
-                      ),
+                      '0',
+                      style: TextStyle(color: Colors.grey[600], fontSize: 14),
                     ),
                   ],
                 ),
                 const SizedBox(width: 24),
                 Row(
                   children: [
-                    Icon(Icons.chat_bubble_outline, size: 20, color: Colors.grey[600]),
+                    Icon(
+                      Icons.chat_bubble_outline,
+                      size: 20,
+                      color: Colors.grey[600],
+                    ),
                     const SizedBox(width: 4),
                     Text(
-                      '${post['comments']}',
-                      style: TextStyle(
-                        color: Colors.grey[600],
-                        fontSize: 14,
-                      ),
+                      '0',
+                      style: TextStyle(color: Colors.grey[600], fontSize: 14),
                     ),
                   ],
                 ),
