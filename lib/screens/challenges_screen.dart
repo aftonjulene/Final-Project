@@ -67,6 +67,7 @@ class ChallengesScreen extends StatelessWidget {
           'Challenges',
           style: TextStyle(fontWeight: FontWeight.w600),
         ),
+        centerTitle: true,
         backgroundColor: Colors.white,
         elevation: 0,
         foregroundColor: Colors.black,

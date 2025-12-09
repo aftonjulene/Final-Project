@@ -20,6 +20,7 @@ class FeedScreen extends StatelessWidget {
           'Feed',
           style: TextStyle(fontWeight: FontWeight.w600),
         ),
+        centerTitle: true,
         backgroundColor: Colors.white,
         elevation: 0,
         foregroundColor: Colors.black,
@@ -72,7 +73,7 @@ class FeedScreen extends StatelessWidget {
 
     final dateLabel = '${date.month}/${date.day}/${date.year}';
 
-    String subtitle = '$dateLabel';
+    String subtitle = dateLabel;
     if (duration != null) {
       subtitle += ' • $duration min';
     }
@@ -83,6 +84,7 @@ class FeedScreen extends StatelessWidget {
     return Card(
       margin: const EdgeInsets.only(bottom: 16),
       elevation: 0,
+      color: const Color.fromARGB(52, 174, 174, 174),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
         side: BorderSide(color: Colors.grey[300]!),
@@ -148,7 +150,7 @@ class FeedScreen extends StatelessWidget {
                     Icon(
                       Icons.favorite_border,
                       size: 20,
-                      color: Colors.grey[600],
+                      color: Colors.red[600],
                     ),
                     const SizedBox(width: 4),
                     Text(
@@ -163,7 +165,7 @@ class FeedScreen extends StatelessWidget {
                     Icon(
                       Icons.chat_bubble_outline,
                       size: 20,
-                      color: Colors.grey[600],
+                      color: const Color.fromARGB(159, 0, 0, 0),
                     ),
                     const SizedBox(width: 4),
                     Text(

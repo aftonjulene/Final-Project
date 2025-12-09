@@ -66,6 +66,7 @@ class ProfileScreen extends StatelessWidget {
           'Profile',
           style: TextStyle(fontWeight: FontWeight.w600),
         ),
+        centerTitle: true,
         backgroundColor: Colors.white,
         elevation: 0,
         foregroundColor: Colors.black,

@@ -26,33 +26,32 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   // Calculate current streak
-  int _calculateStreak(List<QueryDocumentSnapshot<Map<String, dynamic>>> workouts) {
+  int _calculateStreak(
+    List<QueryDocumentSnapshot<Map<String, dynamic>>> workouts,
+  ) {
     if (workouts.isEmpty) return 0;
 
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
-    
-    
-    final workoutDates = workouts
-        .map((doc) {
-          final ts = doc.data()['date'];
-          if (ts is! Timestamp) return null;
-          final date = ts.toDate();
-          return DateTime(date.year, date.month, date.day);
-        })
-        .whereType<DateTime>()
-        .toSet()
-        .toList()
-      ..sort((a, b) => b.compareTo(a));
+
+    final workoutDates =
+        workouts
+            .map((doc) {
+              final ts = doc.data()['date'];
+              if (ts is! Timestamp) return null;
+              final date = ts.toDate();
+              return DateTime(date.year, date.month, date.day);
+            })
+            .whereType<DateTime>()
+            .toSet()
+            .toList()
+          ..sort((a, b) => b.compareTo(a));
 
     if (workoutDates.isEmpty) return 0;
 
-    
     int streak = 0;
     DateTime checkDate = today;
-    
-    
-    
+
     if (workoutDates.first.isBefore(today)) {
       checkDate = today.subtract(const Duration(days: 1));
     }
@@ -70,7 +69,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
     return streak;
   }
 
-  
   int _countWorkoutsInRange(
     List<QueryDocumentSnapshot<Map<String, dynamic>>> workouts,
     DateTime start,
@@ -85,9 +83,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
     }).length;
   }
 
-  
   Map<int, int> _getWeeklyFrequency(
-      List<QueryDocumentSnapshot<Map<String, dynamic>>> workouts) {
+    List<QueryDocumentSnapshot<Map<String, dynamic>>> workouts,
+  ) {
     final frequency = <int, int>{};
     for (int i = 0; i < 7; i++) {
       frequency[i] = 0;
@@ -104,9 +102,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
     return frequency;
   }
 
-  
   List<double> _getVolumeOverTime(
-      List<QueryDocumentSnapshot<Map<String, dynamic>>> workouts) {
+    List<QueryDocumentSnapshot<Map<String, dynamic>>> workouts,
+  ) {
     final now = DateTime.now();
     final weeks = <double>[];
 
@@ -149,6 +147,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
             'Dashboard',
             style: TextStyle(fontWeight: FontWeight.w600),
           ),
+          centerTitle: true,
           backgroundColor: Colors.white,
           elevation: 0,
           foregroundColor: Colors.black,
@@ -166,6 +165,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
             'Dashboard',
             style: TextStyle(fontWeight: FontWeight.w600),
           ),
+          centerTitle: true,
           backgroundColor: Colors.white,
           elevation: 0,
           foregroundColor: Colors.black,
@@ -180,6 +180,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           'Dashboard',
           style: TextStyle(fontWeight: FontWeight.w600),
         ),
+        centerTitle: true,
         backgroundColor: Colors.white,
         elevation: 0,
         foregroundColor: Colors.black,
@@ -192,13 +193,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
           }
 
           if (snapshot.hasError) {
-            return Center(
-              child: Text('Error: ${snapshot.error}'),
-            );
+            return Center(child: Text('Error: ${snapshot.error}'));
           }
 
           final workouts = snapshot.data?.docs ?? [];
-          
+
           // Calculate stats
           final now = DateTime.now();
           final startOfWeek = now.subtract(Duration(days: now.weekday - 1));
@@ -220,157 +219,198 @@ class _DashboardScreenState extends State<DashboardScreen> {
           final volumeOverTime = _getVolumeOverTime(workouts);
 
           return SingleChildScrollView(
-        padding: const EdgeInsets.all(24.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // ---------------- CURRENT STREAK CARD ----------------
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(24),
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [Colors.orange[400]!, Colors.red[400]!],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: Column(
-                children: [
-                  const Text(
-                    'CURRENT STREAK',
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white70,
-                      letterSpacing: 1.2,
+            padding: const EdgeInsets.all(24.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // ---------------- CURRENT STREAK CARD ----------------
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(24),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [Colors.orange[400]!, Colors.red[400]!],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
                     ),
+                    borderRadius: BorderRadius.circular(16),
                   ),
-                  const SizedBox(height: 8),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
+                  child: Column(
+                    children: [
+                      const Text(
+                        'CURRENT STREAK',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white70,
+                          letterSpacing: 1.2,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           const Text('🔥', style: TextStyle(fontSize: 32)),
                           const SizedBox(width: 8),
-                      Text(
+                          Text(
                             '$streak',
                             style: const TextStyle(
-                          fontSize: 48,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                        ),
+                              fontSize: 48,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 4),
+                      const Text(
+                        'days in a row',
+                        style: TextStyle(fontSize: 14, color: Colors.white),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 4),
-                  const Text(
-                    'days in a row',
-                    style: TextStyle(fontSize: 14, color: Colors.white),
+                ),
+
+                const SizedBox(height: 24),
+
+                // ---------------- STATS ROW ----------------
+                Row(
+                  children: [
+                    Expanded(
+                      child: _buildStatCard(
+                        'THIS WEEK',
+                        '$thisWeekCount',
+                        'workouts',
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: _buildStatCard(
+                        'THIS MONTH',
+                        '$thisMonthCount',
+                        'workouts',
+                      ),
+                    ),
+                  ],
+                ),
+
+                const SizedBox(height: 24),
+
+                // ---------------- WEEKLY FREQUENCY ----------------
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    border: Border.all(color: Colors.grey[300]!),
+                    borderRadius: BorderRadius.circular(12),
                   ),
-                ],
-              ),
-            ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'WEEKLY FREQUENCY',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.grey,
+                          letterSpacing: 1.2,
+                        ),
+                      ),
+                      const SizedBox(height: 24),
+                      SizedBox(
+                        height: 150,
+                        child: _buildWeeklyFrequencyChart(weeklyFrequency),
+                      ),
+                      const SizedBox(height: 12),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceAround,
+                        children: const [
+                          Text(
+                            'Mon',
+                            style: TextStyle(fontSize: 12, color: Colors.grey),
+                          ),
+                          Text(
+                            'Tue',
+                            style: TextStyle(fontSize: 12, color: Colors.grey),
+                          ),
+                          Text(
+                            'Wed',
+                            style: TextStyle(fontSize: 12, color: Colors.grey),
+                          ),
+                          Text(
+                            'Thu',
+                            style: TextStyle(fontSize: 12, color: Colors.grey),
+                          ),
+                          Text(
+                            'Fri',
+                            style: TextStyle(fontSize: 12, color: Colors.grey),
+                          ),
+                          Text(
+                            'Sat',
+                            style: TextStyle(fontSize: 12, color: Colors.grey),
+                          ),
+                          Text(
+                            'Sun',
+                            style: TextStyle(fontSize: 12, color: Colors.grey),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
 
-            const SizedBox(height: 24),
+                const SizedBox(height: 24),
 
-            // ---------------- STATS ROW ----------------
-            Row(
-              children: [
-                    Expanded(
-                      child: _buildStatCard('THIS WEEK', '$thisWeekCount', 'workouts'),
-                    ),
-                const SizedBox(width: 12),
-                    Expanded(
-                      child: _buildStatCard('THIS MONTH', '$thisMonthCount', 'workouts'),
-                    ),
+                // ---------------- VOLUME OVER TIME ----------------
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    border: Border.all(color: Colors.grey[300]!),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'VOLUME OVER TIME',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.grey,
+                          letterSpacing: 1.2,
+                        ),
+                      ),
+                      const SizedBox(height: 24),
+                      SizedBox(
+                        height: 150,
+                        child: _buildVolumeChart(volumeOverTime),
+                      ),
+                      const SizedBox(height: 12),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: const [
+                          Text(
+                            'Week 1',
+                            style: TextStyle(fontSize: 12, color: Colors.grey),
+                          ),
+                          Text(
+                            'Week 2',
+                            style: TextStyle(fontSize: 12, color: Colors.grey),
+                          ),
+                          Text(
+                            'Week 3',
+                            style: TextStyle(fontSize: 12, color: Colors.grey),
+                          ),
+                          Text(
+                            'Week 4',
+                            style: TextStyle(fontSize: 12, color: Colors.grey),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
               ],
             ),
-
-            const SizedBox(height: 24),
-
-            // ---------------- WEEKLY FREQUENCY ----------------
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                border: Border.all(color: Colors.grey[300]!),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'WEEKLY FREQUENCY',
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.grey,
-                      letterSpacing: 1.2,
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-                      SizedBox(
-                    height: 150,
-                        child: _buildWeeklyFrequencyChart(weeklyFrequency),
-                  ),
-                  const SizedBox(height: 12),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceAround,
-                    children: const [
-                      Text('Mon', style: TextStyle(fontSize: 12, color: Colors.grey)),
-                      Text('Tue', style: TextStyle(fontSize: 12, color: Colors.grey)),
-                      Text('Wed', style: TextStyle(fontSize: 12, color: Colors.grey)),
-                      Text('Thu', style: TextStyle(fontSize: 12, color: Colors.grey)),
-                      Text('Fri', style: TextStyle(fontSize: 12, color: Colors.grey)),
-                      Text('Sat', style: TextStyle(fontSize: 12, color: Colors.grey)),
-                      Text('Sun', style: TextStyle(fontSize: 12, color: Colors.grey)),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-
-            const SizedBox(height: 24),
-
-            // ---------------- VOLUME OVER TIME ----------------
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                border: Border.all(color: Colors.grey[300]!),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'VOLUME OVER TIME',
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.grey,
-                      letterSpacing: 1.2,
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-                      SizedBox(
-                    height: 150,
-                        child: _buildVolumeChart(volumeOverTime),
-                  ),
-                  const SizedBox(height: 12),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: const [
-                      Text('Week 1', style: TextStyle(fontSize: 12, color: Colors.grey)),
-                      Text('Week 2', style: TextStyle(fontSize: 12, color: Colors.grey)),
-                      Text('Week 3', style: TextStyle(fontSize: 12, color: Colors.grey)),
-                      Text('Week 4', style: TextStyle(fontSize: 12, color: Colors.grey)),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
           );
         },
       ),
@@ -532,7 +572,6 @@ class _VolumeChartPainter extends CustomPainter {
       points.add(Offset(x, y));
     }
 
-    
     if (points.length > 1) {
       final path = Path()
         ..moveTo(points.first.dx, size.height - padding)
@@ -560,9 +599,7 @@ class _VolumeChartPainter extends CustomPainter {
     }
 
     // Draw volume labels
-    final textPainter = TextPainter(
-      textDirection: TextDirection.ltr,
-    );
+    final textPainter = TextPainter(textDirection: TextDirection.ltr);
     for (int i = 0; i < volumes.length; i++) {
       final volume = volumes[i];
       if (volume > 0) {
@@ -571,18 +608,12 @@ class _VolumeChartPainter extends CustomPainter {
             : volume.toStringAsFixed(0);
         textPainter.text = TextSpan(
           text: label,
-          style: const TextStyle(
-            fontSize: 10,
-            color: Colors.grey,
-          ),
+          style: const TextStyle(fontSize: 10, color: Colors.grey),
         );
         textPainter.layout();
         textPainter.paint(
           canvas,
-          Offset(
-            points[i].dx - (textPainter.width / 2),
-            points[i].dy - 16,
-          ),
+          Offset(points[i].dx - (textPainter.width / 2), points[i].dy - 16),
         );
       }
     }

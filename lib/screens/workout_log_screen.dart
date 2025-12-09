@@ -12,102 +12,107 @@ class LogWorkoutScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    const primary = Color(0xFF1a1d2e);
+
     return Scaffold(
       appBar: AppBar(
         title: const Text(
           'Log Workout',
           style: TextStyle(fontWeight: FontWeight.w600),
         ),
+        centerTitle: true,
         backgroundColor: Colors.white,
         elevation: 0,
         foregroundColor: Colors.black,
       ),
-      body: Padding(
+      body: SingleChildScrollView(
         padding: const EdgeInsets.all(24.0),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            const SizedBox(height: 8),
             const Text(
-              'Add a workout using one of the options below.',
-              style: TextStyle(fontSize: 14, color: Colors.grey),
-            ),
-            const SizedBox(height: 24),
-            SizedBox(
-              height: 48,
-              child: ElevatedButton.icon(
-                onPressed: () {
-                  Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (_) => const WorkoutEditorScreen(
-                        mode: WorkoutEditorMode.quick,
-                      ),
-                    ),
-                  );
-                },
-                icon: const Icon(Icons.flash_on),
-                label: const Text(
-                  'Quick Log',
-                  style: TextStyle(fontWeight: FontWeight.w600),
-                ),
+              'B E A S T  M O D E',
+              style: TextStyle(
+                fontSize: 22,
+                fontWeight: FontWeight.w600,
+                color: Color(0xFF1a1d2e),
               ),
             ),
-            const SizedBox(height: 16),
-            SizedBox(
-              height: 48,
-              child: OutlinedButton.icon(
-                onPressed: () {
-                  Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (_) => const WorkoutEditorScreen(
-                        mode: WorkoutEditorMode.template,
-                      ),
-                    ),
-                  );
-                },
-                icon: const Icon(Icons.list),
-                label: const Text(
-                  'From Template',
-                  style: TextStyle(fontWeight: FontWeight.w600),
-                ),
-              ),
+            const SizedBox(height: 20),
+            Text(
+              'Personalize your workout, track progress, and crush your fitness goals.',
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 18, color: Colors.grey[700]),
             ),
-            const SizedBox(height: 16),
-            SizedBox(
-              height: 48,
-              child: OutlinedButton.icon(
-                onPressed: () {
-                  Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (_) => const RepeatPreviousScreen(),
+            const SizedBox(height: 60),
+            _ActionTile(
+              title: 'Quick Log',
+              subtitle:
+                  'Personalize your workout with custom exercises and details.',
+              icon: Icons.flash_on,
+              backgroundColor: const Color.fromARGB(204, 26, 29, 46),
+              iconColor: Colors.white,
+              textColor: Colors.white,
+              onTap: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => const WorkoutEditorScreen(
+                      mode: WorkoutEditorMode.quick,
                     ),
-                  );
-                },
-                icon: const Icon(Icons.history),
-                label: const Text(
-                  'Repeat Previous',
-                  style: TextStyle(fontWeight: FontWeight.w600),
-                ),
-              ),
+                  ),
+                );
+              },
             ),
-            const SizedBox(height: 32),
-            const Divider(),
-            const SizedBox(height: 16),
-            TextButton(
-              onPressed: () {
+            const SizedBox(height: 30),
+            _ActionTile(
+              title: 'Template Workout',
+              subtitle: 'Use a structured plan with pre-filled exercises.',
+              icon: Icons.view_agenda,
+              backgroundColor: const Color.fromARGB(193, 61, 66, 92),
+              iconColor: Colors.white,
+              textColor: Colors.white,
+              onTap: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => const WorkoutEditorScreen(
+                      mode: WorkoutEditorMode.template,
+                    ),
+                  ),
+                );
+              },
+            ),
+            const SizedBox(height: 30),
+            _ActionTile(
+              title: 'Repeat Previous',
+              subtitle: 'Easily log a past workout from your history.',
+              icon: Icons.refresh,
+              backgroundColor: const Color.fromARGB(184, 74, 81, 105),
+              iconColor: Colors.white,
+              textColor: Colors.white,
+              onTap: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => const RepeatPreviousScreen(),
+                  ),
+                );
+              },
+            ),
+            const SizedBox(height: 30),
+            _ActionTile(
+              title: 'Workout History',
+              subtitle: 'Review or edit your past training sessions.',
+              icon: Icons.history,
+              backgroundColor: const Color.fromARGB(255, 255, 255, 255),
+              iconColor: Colors.white,
+              textColor: const Color.fromARGB(255, 0, 0, 0),
+              showBorder: true,
+              onTap: () {
                 Navigator.of(context).push(
                   MaterialPageRoute(
                     builder: (_) => const WorkoutHistoryScreen(),
                   ),
                 );
               },
-              child: const Text(
-                'View Workout History',
-                style: TextStyle(
-                  decoration: TextDecoration.underline,
-                  color: Color(0xFF1a1d2e),
-                ),
-              ),
             ),
           ],
         ),
@@ -338,7 +343,7 @@ class _WorkoutEditorScreenState extends State<WorkoutEditorScreen> {
 
       if (widget.mode == WorkoutEditorMode.edit && widget.workoutId != null) {
         // For now we only update the workout document when editing.
-        // Challenge progress is driven by new logs, not retro edits.
+        // Challenge progress is driven by new logs, not edits.
         await workoutsRef.doc(widget.workoutId!).update(payload);
       } else {
         // Create a new workout, then update challenges based on it.
@@ -388,6 +393,9 @@ class _WorkoutEditorScreenState extends State<WorkoutEditorScreen> {
   @override
   Widget build(BuildContext context) {
     String title;
+    const primary = Color(0xFF1a1d2e);
+    final borderColor = Colors.grey[300]!;
+
     switch (widget.mode) {
       case WorkoutEditorMode.quick:
         title = 'Quick Log';
@@ -424,13 +432,19 @@ class _WorkoutEditorScreenState extends State<WorkoutEditorScreen> {
               controller: _titleController,
               decoration: InputDecoration(
                 hintText: 'Leg Day, Push Day, Cardio...',
+                filled: true,
+                fillColor: Colors.white,
                 border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
-                  borderSide: const BorderSide(color: Colors.grey),
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide(color: borderColor),
                 ),
                 enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
-                  borderSide: const BorderSide(color: Colors.grey),
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide(color: borderColor),
+                ),
+                focusedBorder: const OutlineInputBorder(
+                  borderRadius: BorderRadius.all(Radius.circular(12)),
+                  borderSide: BorderSide(color: primary, width: 1.2),
                 ),
                 contentPadding: const EdgeInsets.symmetric(
                   horizontal: 16,
@@ -449,13 +463,19 @@ class _WorkoutEditorScreenState extends State<WorkoutEditorScreen> {
               keyboardType: TextInputType.number,
               decoration: InputDecoration(
                 hintText: '45',
+                filled: true,
+                fillColor: Colors.white,
                 border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
-                  borderSide: const BorderSide(color: Colors.grey),
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide(color: borderColor),
                 ),
                 enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
-                  borderSide: const BorderSide(color: Colors.grey),
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide(color: borderColor),
+                ),
+                focusedBorder: const OutlineInputBorder(
+                  borderRadius: BorderRadius.all(Radius.circular(12)),
+                  borderSide: BorderSide(color: primary, width: 1.2),
                 ),
                 contentPadding: const EdgeInsets.symmetric(
                   horizontal: 16,
@@ -478,8 +498,16 @@ class _WorkoutEditorScreenState extends State<WorkoutEditorScreen> {
                   vertical: 14,
                 ),
                 decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: Colors.grey[300]!),
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: borderColor),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.02),
+                      blurRadius: 8,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
                 ),
                 child: Text(
                   '${_selectedDate.month}/${_selectedDate.day}/${_selectedDate.year}',
@@ -498,21 +526,40 @@ class _WorkoutEditorScreenState extends State<WorkoutEditorScreen> {
                 final ex = _exercises[index];
                 return Container(
                   margin: const EdgeInsets.only(bottom: 12),
-                  padding: const EdgeInsets.all(12),
+                  padding: const EdgeInsets.all(14),
                   decoration: BoxDecoration(
-                    border: Border.all(color: Colors.grey[300]!),
-                    borderRadius: BorderRadius.circular(8),
+                    color: Colors.white,
+                    border: Border.all(color: borderColor),
+                    borderRadius: BorderRadius.circular(14),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.03),
+                        blurRadius: 10,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Row(
                         children: [
-                          Text(
-                            'Exercise ${index + 1}',
-                            style: const TextStyle(
-                              fontWeight: FontWeight.w600,
-                              fontSize: 14,
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 6,
+                            ),
+                            decoration: BoxDecoration(
+                              color: primary.withOpacity(0.08),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Text(
+                              'Exercise ${index + 1}',
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w700,
+                                fontSize: 13,
+                                color: primary,
+                              ),
                             ),
                           ),
                           const Spacer(),
@@ -530,13 +577,19 @@ class _WorkoutEditorScreenState extends State<WorkoutEditorScreen> {
                         onChanged: (v) => ex.name = v,
                         decoration: InputDecoration(
                           hintText: 'Squats, Bench Press...',
+                          filled: true,
+                          fillColor: Colors.white,
                           border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(8),
-                            borderSide: const BorderSide(color: Colors.grey),
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide(color: borderColor),
                           ),
                           enabledBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(8),
-                            borderSide: const BorderSide(color: Colors.grey),
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide(color: borderColor),
+                          ),
+                          focusedBorder: const OutlineInputBorder(
+                            borderRadius: BorderRadius.all(Radius.circular(12)),
+                            borderSide: BorderSide(color: primary, width: 1.1),
                           ),
                           contentPadding: const EdgeInsets.symmetric(
                             horizontal: 16,
@@ -554,16 +607,23 @@ class _WorkoutEditorScreenState extends State<WorkoutEditorScreen> {
                               keyboardType: TextInputType.number,
                               decoration: InputDecoration(
                                 labelText: 'Sets',
+                                filled: true,
+                                fillColor: Colors.white,
                                 border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(8),
-                                  borderSide: const BorderSide(
-                                    color: Colors.grey,
-                                  ),
+                                  borderRadius: BorderRadius.circular(12),
+                                  borderSide: BorderSide(color: borderColor),
                                 ),
                                 enabledBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(8),
-                                  borderSide: const BorderSide(
-                                    color: Colors.grey,
+                                  borderRadius: BorderRadius.circular(12),
+                                  borderSide: BorderSide(color: borderColor),
+                                ),
+                                focusedBorder: const OutlineInputBorder(
+                                  borderRadius: BorderRadius.all(
+                                    Radius.circular(12),
+                                  ),
+                                  borderSide: BorderSide(
+                                    color: primary,
+                                    width: 1.1,
                                   ),
                                 ),
                               ),
@@ -577,16 +637,23 @@ class _WorkoutEditorScreenState extends State<WorkoutEditorScreen> {
                               keyboardType: TextInputType.number,
                               decoration: InputDecoration(
                                 labelText: 'Reps',
+                                filled: true,
+                                fillColor: Colors.white,
                                 border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(8),
-                                  borderSide: const BorderSide(
-                                    color: Colors.grey,
-                                  ),
+                                  borderRadius: BorderRadius.circular(12),
+                                  borderSide: BorderSide(color: borderColor),
                                 ),
                                 enabledBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(8),
-                                  borderSide: const BorderSide(
-                                    color: Colors.grey,
+                                  borderRadius: BorderRadius.circular(12),
+                                  borderSide: BorderSide(color: borderColor),
+                                ),
+                                focusedBorder: const OutlineInputBorder(
+                                  borderRadius: BorderRadius.all(
+                                    Radius.circular(12),
+                                  ),
+                                  borderSide: BorderSide(
+                                    color: primary,
+                                    width: 1.1,
                                   ),
                                 ),
                               ),
@@ -605,16 +672,23 @@ class _WorkoutEditorScreenState extends State<WorkoutEditorScreen> {
                               decoration: InputDecoration(
                                 labelText: 'Weight',
                                 hintText: 'lbs or kg',
+                                filled: true,
+                                fillColor: Colors.white,
                                 border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(8),
-                                  borderSide: const BorderSide(
-                                    color: Colors.grey,
-                                  ),
+                                  borderRadius: BorderRadius.circular(12),
+                                  borderSide: BorderSide(color: borderColor),
                                 ),
                                 enabledBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(8),
-                                  borderSide: const BorderSide(
-                                    color: Colors.grey,
+                                  borderRadius: BorderRadius.circular(12),
+                                  borderSide: BorderSide(color: borderColor),
+                                ),
+                                focusedBorder: const OutlineInputBorder(
+                                  borderRadius: BorderRadius.all(
+                                    Radius.circular(12),
+                                  ),
+                                  borderSide: BorderSide(
+                                    color: primary,
+                                    width: 1.1,
                                   ),
                                 ),
                               ),
@@ -628,16 +702,23 @@ class _WorkoutEditorScreenState extends State<WorkoutEditorScreen> {
                               keyboardType: TextInputType.number,
                               decoration: InputDecoration(
                                 labelText: 'Rest (sec)',
+                                filled: true,
+                                fillColor: Colors.white,
                                 border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(8),
-                                  borderSide: const BorderSide(
-                                    color: Colors.grey,
-                                  ),
+                                  borderRadius: BorderRadius.circular(12),
+                                  borderSide: BorderSide(color: borderColor),
                                 ),
                                 enabledBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(8),
-                                  borderSide: const BorderSide(
-                                    color: Colors.grey,
+                                  borderRadius: BorderRadius.circular(12),
+                                  borderSide: BorderSide(color: borderColor),
+                                ),
+                                focusedBorder: const OutlineInputBorder(
+                                  borderRadius: BorderRadius.all(
+                                    Radius.circular(12),
+                                  ),
+                                  borderSide: BorderSide(
+                                    color: primary,
+                                    width: 1.1,
                                   ),
                                 ),
                               ),
@@ -668,7 +749,7 @@ class _WorkoutEditorScreenState extends State<WorkoutEditorScreen> {
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF1a1d2e),
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
+                    borderRadius: BorderRadius.circular(12),
                   ),
                 ),
                 child: _saving
@@ -836,6 +917,97 @@ class RepeatPreviousScreen extends StatelessWidget {
             },
           );
         },
+      ),
+    );
+  }
+}
+
+class _ActionTile extends StatelessWidget {
+  final String title;
+  final String subtitle;
+  final IconData icon;
+  final Color backgroundColor;
+  final Color iconColor;
+  final Color textColor;
+  final bool showBorder;
+  final VoidCallback onTap;
+
+  const _ActionTile({
+    required this.title,
+    required this.subtitle,
+    required this.icon,
+    required this.backgroundColor,
+    required this.iconColor,
+    required this.textColor,
+    this.showBorder = false,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(14),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 25),
+        decoration: BoxDecoration(
+          color: backgroundColor,
+          borderRadius: BorderRadius.circular(14),
+          border: showBorder
+              ? Border.all(color: const Color(0xFF1a1d2e), width: 1)
+              : null,
+          boxShadow: showBorder
+              ? [
+                  BoxShadow(
+                    color: Colors.black.withAlpha(15),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
+                  ),
+                ]
+              : null,
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 40,
+              height: 40,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: Colors.black,
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Icon(icon, size: 22, color: iconColor),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                      color: textColor,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    subtitle,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: textColor == Colors.white
+                          ? Colors.white70
+                          : Colors.grey[600],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 8),
+            Icon(Icons.chevron_right, color: textColor, size: 22),
+          ],
+        ),
       ),
     );
   }
