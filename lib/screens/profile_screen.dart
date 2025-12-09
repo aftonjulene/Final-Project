@@ -54,8 +54,8 @@ class ProfileScreen extends StatelessWidget {
     final user = FirebaseAuth.instance.currentUser;
 
     if (user == null) {
-      // should not really happen, but just in case
-      return const Scaffold(body: Center(child: Text('No user logged in')));
+      // If somehow we hit ProfileScreen without a user, just go to LoginScreen
+      return const LoginScreen();
     }
 
     final docRef = FirebaseFirestore.instance.collection('users').doc(user.uid);
@@ -216,7 +216,6 @@ class ProfileScreen extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 16),
-                  // this will be wired to real workout data later
                   Container(
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(

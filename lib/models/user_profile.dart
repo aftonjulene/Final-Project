@@ -52,7 +52,7 @@ class UserProfile {
     return UserProfile(
       uid: data['uid'] as String,
       email: data['email'] as String,
-      displayName: data['displayName'] as String?,
+      displayName: (data['displayName'] ?? data['name']) as String?,
       age: data['age'] as int?,
       heightCm: (data['heightCm'] as num?)?.toDouble(),
       weightKg: (data['weightKg'] as num?)?.toDouble(),

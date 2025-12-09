@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../services/auth_service.dart';
 import 'main_navigation.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class SignUpScreen extends StatefulWidget {
   const SignUpScreen({super.key});
@@ -11,7 +12,7 @@ class SignUpScreen extends StatefulWidget {
 }
 
 class _SignUpScreenState extends State<SignUpScreen> {
-  final _fullNameController = TextEditingController();
+  final _displayNameController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
@@ -24,7 +25,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
 
   @override
   void dispose() {
-    _fullNameController.dispose();
+    _displayNameController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
     _confirmPasswordController.dispose();
@@ -32,7 +33,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
   }
 
   Future<void> _handleSignUp() async {
-    final fullName = _fullNameController.text.trim();
+    final fullName = _displayNameController.text.trim();
     final email = _emailController.text.trim();
     final password = _passwordController.text.trim();
     final confirm = _confirmPasswordController.text.trim();
@@ -44,6 +45,13 @@ class _SignUpScreenState extends State<SignUpScreen> {
       return;
     }
 
+    if (fullName.isEmpty) {
+      setState(() {
+        _error = 'Please enter your full name.';
+      });
+      return;
+    }
+
     setState(() {
       _loading = true;
       _error = null;
@@ -51,8 +59,26 @@ class _SignUpScreenState extends State<SignUpScreen> {
 
     try {
       final cred = await _auth.signUp(email, password);
+      final user = cred.user;
 
-      await cred.user?.updateDisplayName(fullName);
+      if (user == null) {
+        throw Exception('User creation failed.');
+      }
+
+      // Update Firebase Auth display name
+      await user.updateDisplayName(fullName);
+
+      // Create / update Firestore user document
+      final usersRef = FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid);
+
+      await usersRef.set({
+        'uid': user.uid,
+        'email': user.email,
+        'displayName': fullName,
+        'createdAt': Timestamp.fromDate(DateTime.now()),
+      }, SetOptions(merge: true));
 
       if (!mounted) return;
 
@@ -112,7 +138,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                 ),
                 const SizedBox(height: 8),
                 TextField(
-                  controller: _fullNameController,
+                  controller: _displayNameController,
                   decoration: InputDecoration(
                     hintText: 'John Doe',
                     border: OutlineInputBorder(
