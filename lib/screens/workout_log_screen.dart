@@ -3,6 +3,10 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'workout_history_screen.dart';
 
+import '../models/workout.dart';
+import '../models/exercise.dart';
+import '../services/challenge_service.dart';
+
 class LogWorkoutScreen extends StatelessWidget {
   const LogWorkoutScreen({super.key});
 
@@ -333,9 +337,37 @@ class _WorkoutEditorScreenState extends State<WorkoutEditorScreen> {
       };
 
       if (widget.mode == WorkoutEditorMode.edit && widget.workoutId != null) {
+        // For now we only update the workout document when editing.
+        // Challenge progress is driven by new logs, not retro edits.
         await workoutsRef.doc(widget.workoutId!).update(payload);
       } else {
-        await workoutsRef.add(payload);
+        // Create a new workout, then update challenges based on it.
+        final docRef = await workoutsRef.add(payload);
+
+        final exercises = exerciseMaps.map((m) {
+          return Exercise(
+            name: (m['name'] as String?) ?? '',
+            sets: (m['sets'] as int?) ?? 0,
+            reps: (m['reps'] as int?) ?? 0,
+            weight: (m['weight'] as num?)?.toDouble() ?? 0.0,
+            restSeconds: m['restSeconds'] as int?,
+          );
+        }).toList();
+
+        final workout = Workout(
+          id: docRef.id,
+          userId: user.uid,
+          title: title,
+          date: _selectedDate,
+          durationMinutes: durationMinutes,
+          exercises: exercises,
+        );
+
+        final challengeService = ChallengeService();
+        await challengeService.updateChallengesForWorkout(
+          workout: workout,
+          userId: user.uid,
+        );
       }
 
       if (!mounted) return;

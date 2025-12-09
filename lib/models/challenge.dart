@@ -8,8 +8,14 @@ class Challenge {
   final bool isPublic;
   final DateTime startDate;
   final DateTime endDate;
+
   final String? goalType;
   final double? goalValue;
+
+  final String? ladderKey;
+  final String? exerciseName;
+
+  final bool isActive;
 
   Challenge({
     required this.id,
@@ -21,6 +27,9 @@ class Challenge {
     required this.endDate,
     this.goalType,
     this.goalValue,
+    this.ladderKey,
+    this.exerciseName,
+    this.isActive = true,
   });
 
   Map<String, dynamic> toMap() {
@@ -33,6 +42,9 @@ class Challenge {
       'endDate': Timestamp.fromDate(endDate),
       'goalType': goalType,
       'goalValue': goalValue,
+      'ladderKey': ladderKey,
+      'exerciseName': exerciseName,
+      'isActive': isActive,
     };
   }
 
@@ -51,6 +63,9 @@ class Challenge {
       endDate: endTs.toDate(),
       goalType: data['goalType'] as String?,
       goalValue: (data['goalValue'] as num?)?.toDouble(),
+      ladderKey: data['ladderKey'] as String?,
+      exerciseName: data['exerciseName'] as String?,
+      isActive: (data['isActive'] as bool?) ?? true,
     );
   }
 }

@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import '../models/workout.dart';
 import '../models/exercise.dart';
+import '../services/challenge_service.dart';
 
 class WorkoutFormScreen extends StatefulWidget {
   const WorkoutFormScreen({Key? key}) : super(key: key);
@@ -169,6 +170,13 @@ class _WorkoutFormScreenState extends State<WorkoutFormScreen> {
       );
 
       await docRef.set(workout.toMap());
+
+      // Update all joined challenges based on this workout.
+      final challengeService = ChallengeService();
+      await challengeService.updateChallengesForWorkout(
+        workout: workout,
+        userId: user.uid,
+      );
 
       if (!mounted) return;
       Navigator.pop(context); // go back to wherever we came from

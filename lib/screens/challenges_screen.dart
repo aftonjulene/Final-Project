@@ -33,7 +33,8 @@ class ChallengesScreen extends StatelessWidget {
       progressValue: 0.0,
       completed: false,
       joinedAt: now,
-      lastUpdated: now,
+      // Important: null so the first workout sets the streak correctly.
+      lastUpdated: null,
     );
 
     await participantRef.set(participant.toMap());
@@ -125,8 +126,15 @@ class ChallengesScreen extends StatelessWidget {
         }
 
         final joined = participant != null;
-        final progress = participant?.progressValue ?? 0.0;
-        final percent = (progress * 100).clamp(0, 100).toInt();
+        final rawProgress = participant?.progressValue ?? 0.0;
+        final target = challenge.goalValue ?? 0.0;
+
+        double fraction = 0.0;
+        if (target > 0) {
+          fraction = (rawProgress / target).clamp(0.0, 1.0);
+        }
+
+        final percent = (fraction * 100).round().clamp(0, 100);
 
         return Container(
           margin: const EdgeInsets.only(bottom: 16),
@@ -191,7 +199,7 @@ class ChallengesScreen extends StatelessWidget {
               ClipRRect(
                 borderRadius: BorderRadius.circular(4),
                 child: LinearProgressIndicator(
-                  value: progress.clamp(0.0, 1.0),
+                  value: fraction,
                   backgroundColor: Colors.grey[200],
                   color: const Color(0xFF1a1d2e),
                   minHeight: 8,
