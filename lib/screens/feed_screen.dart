@@ -538,7 +538,7 @@ class _FeedScreenState extends State<FeedScreen> {
                   ),
                 ],
             const SizedBox(height: 16),
-            // Like and comment buttons
+            // Like and comment buttons working
                 Row(
                   children: [
                     GestureDetector(
