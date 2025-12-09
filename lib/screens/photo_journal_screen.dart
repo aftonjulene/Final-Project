@@ -436,3 +436,5 @@ class _PhotoJournalScreenState extends State<PhotoJournalScreen> {
     );
   }
 }
+
+//photo journal
