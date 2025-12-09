@@ -4,6 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 
 import '../services/auth_service.dart';
 import '../models/user_profile.dart';
+import '../widgets/stat_card.dart';
 import 'edit_profile_screen.dart';
 import 'photo_journal_screen.dart';
 import 'settings_screen.dart';
@@ -159,15 +160,18 @@ class ProfileScreen extends StatelessWidget {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                     children: [
-                      _buildStatCard(
-                        (data['workoutCount'] ?? 0).toString(),
-                        'Workouts',
+                      SimpleStatCard(
+                        value: (data['workoutCount'] ?? 0).toString(),
+                        label: 'Workouts',
                       ),
-                      _buildStatCard(
-                        (data['streak'] ?? 0).toString(),
-                        'Day Streak',
+                      SimpleStatCard(
+                        value: (data['streak'] ?? 0).toString(),
+                        label: 'Day Streak',
                       ),
-                      _buildStatCard((data['prs'] ?? 0).toString(), 'PRs'),
+                      SimpleStatCard(
+                        value: (data['prs'] ?? 0).toString(),
+                        label: 'PRs',
+                      ),
                     ],
                   ),
                   const SizedBox(height: 24),
@@ -259,25 +263,6 @@ class ProfileScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildStatCard(String value, String label) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-      decoration: BoxDecoration(
-        border: Border.all(color: Colors.grey[300]!),
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Column(
-        children: [
-          Text(
-            value,
-            style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 4),
-          Text(label, style: const TextStyle(fontSize: 12, color: Colors.grey)),
-        ],
-      ),
-    );
-  }
 
   Widget _buildMenuButton({
     required IconData icon,

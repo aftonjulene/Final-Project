@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import '../widgets/stat_card.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -97,7 +98,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
       final ts = doc.data()['date'];
       if (ts is! Timestamp) continue;
       final date = ts.toDate();
-      final dayOfWeek = date.weekday % 7; // 0 = Monday, 6 = Sunday
+      // weekday: 1=Monday, 2=Tuesday, ..., 7=Sunday
+      // Map to index: 0=Monday, 1=Tuesday, ..., 6=Sunday
+      final dayOfWeek = (date.weekday - 1) % 7;
       frequency[dayOfWeek] = (frequency[dayOfWeek] ?? 0) + 1;
     }
 
@@ -277,13 +280,21 @@ class _DashboardScreenState extends State<DashboardScreen> {
             // ---------------- STATS ROW ----------------
             Row(
               children: [
-                    Expanded(
-                      child: _buildStatCard('THIS WEEK', '$thisWeekCount', 'workouts'),
-                    ),
+                Expanded(
+                  child: StatCard(
+                    title: 'THIS WEEK',
+                    value: '$thisWeekCount',
+                    label: 'workouts',
+                  ),
+                ),
                 const SizedBox(width: 12),
-                    Expanded(
-                      child: _buildStatCard('THIS MONTH', '$thisMonthCount', 'workouts'),
-                    ),
+                Expanded(
+                  child: StatCard(
+                    title: 'THIS MONTH',
+                    value: '$thisMonthCount',
+                    label: 'workouts',
+                  ),
+                ),
               ],
             ),
 
@@ -377,39 +388,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  // ----------------------------------------------------------------
-  // REUSABLE STAT CARD
-  // ----------------------------------------------------------------
-  Widget _buildStatCard(String title, String value, String label) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        border: Border.all(color: Colors.grey[300]!),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            title,
-            style: const TextStyle(
-              fontSize: 10,
-              fontWeight: FontWeight.bold,
-              color: Colors.grey,
-              letterSpacing: 1.2,
-            ),
-          ),
-          const SizedBox(height: 12),
-          Text(
-            value,
-            style: const TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 4),
-          Text(label, style: const TextStyle(fontSize: 14, color: Colors.grey)),
-        ],
-      ),
-    );
-  }
 
   // ----------------------------------------------------------------
   // WEEKLY FREQUENCY BAR CHART
