@@ -15,29 +15,40 @@ class ChallengesScreen extends StatelessWidget {
         .snapshots();
   }
 
+  // JOIN challenge
   Future<void> _joinChallenge(Challenge challenge) async {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return;
 
     final now = DateTime.now();
     final participantRef = FirebaseFirestore.instance
-        .collection('challenges')
-        .doc(challenge.id)
-        .collection('participants')
-        .doc(user.uid);
+        .collection('challengeParticipants') // FIXED: correct collection
+        .doc('${challenge.id}_${user.uid}');
 
     final participant = ChallengeParticipant(
-      id: user.uid,
+      id: '${challenge.id}_${user.uid}',
       challengeId: challenge.id,
       userId: user.uid,
       progressValue: 0.0,
       completed: false,
       joinedAt: now,
-      // Important: null so the first workout sets the streak correctly.
       lastUpdated: null,
     );
 
     await participantRef.set(participant.toMap());
+  }
+
+  // LEAVE challenge
+  Future<void> _leaveChallenge(String challengeId, String uid) async {
+    final ref = FirebaseFirestore.instance
+        .collection('challengeParticipants')
+        .where('challengeId', isEqualTo: challengeId)
+        .where('userId', isEqualTo: uid);
+
+    final snap = await ref.get();
+    for (final doc in snap.docs) {
+      await doc.reference.delete();
+    }
   }
 
   @override
@@ -66,12 +77,6 @@ class ChallengesScreen extends StatelessWidget {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(
               child: CircularProgressIndicator(strokeWidth: 2),
-            );
-          }
-
-          if (snapshot.hasError) {
-            return const Center(
-              child: Text('No challenges available right now.'),
             );
           }
 
@@ -110,19 +115,21 @@ class ChallengesScreen extends StatelessWidget {
     final end = challenge.endDate;
     final range = '${start.month}/${start.day} - ${end.month}/${end.day}';
 
-    final participantDocStream = FirebaseFirestore.instance
-        .collection('challenges')
-        .doc(challenge.id)
-        .collection('participants')
-        .doc(uid)
+    // FIXED: correct participant stream lookup
+    final participantStream = FirebaseFirestore.instance
+        .collection('challengeParticipants')
+        .where('challengeId', isEqualTo: challenge.id)
+        .where('userId', isEqualTo: uid)
+        .limit(1)
         .snapshots();
 
-    return StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
-      stream: participantDocStream,
+    return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+      stream: participantStream,
       builder: (context, snapshot) {
         ChallengeParticipant? participant;
-        if (snapshot.hasData && snapshot.data!.exists) {
-          participant = ChallengeParticipant.fromDoc(snapshot.data!);
+
+        if (snapshot.hasData && snapshot.data!.docs.isNotEmpty) {
+          participant = ChallengeParticipant.fromDoc(snapshot.data!.docs.first);
         }
 
         final joined = participant != null;
@@ -146,7 +153,7 @@ class ChallengesScreen extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // header row
+              // header
               Row(
                 children: [
                   Container(
@@ -194,7 +201,9 @@ class ChallengesScreen extends StatelessWidget {
                   ),
                 ],
               ),
+
               const SizedBox(height: 16),
+
               // progress bar
               ClipRRect(
                 borderRadius: BorderRadius.circular(4),
@@ -206,6 +215,7 @@ class ChallengesScreen extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 8),
+
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
@@ -231,29 +241,40 @@ class ChallengesScreen extends StatelessWidget {
                   ),
                 ],
               ),
+
               const SizedBox(height: 12),
+
+              // JOIN / LEAVE button
               SizedBox(
                 width: double.infinity,
-                child: OutlinedButton(
-                  onPressed: joined
-                      ? null
-                      : () {
-                          _joinChallenge(challenge);
+                child: joined
+                    ? OutlinedButton(
+                        onPressed: () async {
+                          await _leaveChallenge(challenge.id, uid);
                         },
-                  style: OutlinedButton.styleFrom(
-                    side: const BorderSide(color: Color(0xFF1a1d2e)),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                  ),
-                  child: Text(
-                    joined ? 'Joined' : 'Join Challenge',
-                    style: TextStyle(
-                      color: joined ? Colors.grey : const Color(0xFF1a1d2e),
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
+                        style: OutlinedButton.styleFrom(
+                          side: const BorderSide(color: Colors.red),
+                        ),
+                        child: const Text(
+                          'Leave Challenge',
+                          style: TextStyle(color: Colors.red),
+                        ),
+                      )
+                    : OutlinedButton(
+                        onPressed: () async {
+                          await _joinChallenge(challenge);
+                        },
+                        style: OutlinedButton.styleFrom(
+                          side: const BorderSide(color: Color(0xFF1a1d2e)),
+                        ),
+                        child: const Text(
+                          'Join Challenge',
+                          style: TextStyle(
+                            color: Color(0xFF1a1d2e),
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
               ),
             ],
           ),

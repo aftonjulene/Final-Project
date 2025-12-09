@@ -234,3 +234,19 @@ class ChallengeService {
     }
   }
 }
+
+Future<void> leaveChallenge({
+  required String challengeId,
+  required String userId,
+}) async {
+  final ref = FirebaseFirestore.instance
+      .collection('challengeParticipants')
+      .where('userId', isEqualTo: userId)
+      .where('challengeId', isEqualTo: challengeId);
+
+  final snap = await ref.get();
+
+  for (final doc in snap.docs) {
+    await doc.reference.delete();
+  }
+}
