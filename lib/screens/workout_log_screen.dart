@@ -328,6 +328,7 @@ class _WorkoutEditorScreenState extends State<WorkoutEditorScreen> {
           user.email ??
           'Beast Mode Athlete';
       final goal = profile?['goal'] as String?;
+      final isPrivate = profile?['isPrivate'] as bool? ?? false;
 
       final workoutsRef = FirebaseFirestore.instance.collection('workouts');
       final payload = {
@@ -338,15 +339,13 @@ class _WorkoutEditorScreenState extends State<WorkoutEditorScreen> {
         'createdAt': Timestamp.fromDate(DateTime.now()),
         'userName': displayName,
         'userGoal': goal,
+        'userIsPrivate': isPrivate,
         'exercises': exerciseMaps,
       };
 
       if (widget.mode == WorkoutEditorMode.edit && widget.workoutId != null) {
-        // For now we only update the workout document when editing.
-        // Challenge progress is driven by new logs, not edits.
         await workoutsRef.doc(widget.workoutId!).update(payload);
       } else {
-        // Create a new workout, then update challenges based on it.
         final docRef = await workoutsRef.add(payload);
 
         final exercises = exerciseMaps.map((m) {

@@ -8,6 +8,7 @@ class Workout {
   final DateTime date;
   final int? durationMinutes;
   final List<Exercise> exercises;
+  final bool userIsPrivate;
 
   Workout({
     required this.id,
@@ -16,6 +17,7 @@ class Workout {
     required this.date,
     this.durationMinutes,
     required this.exercises,
+    this.userIsPrivate = false,
   });
 
   Map<String, dynamic> toMap() {
@@ -25,6 +27,7 @@ class Workout {
       'date': Timestamp.fromDate(date),
       'durationMinutes': durationMinutes,
       'exercises': exercises.map((e) => e.toMap()).toList(),
+      'userIsPrivate': userIsPrivate,
     };
   }
 
@@ -42,6 +45,7 @@ class Workout {
       exercises: rawExercises
           .map((e) => Exercise.fromMap(Map<String, dynamic>.from(e)))
           .toList(),
+      userIsPrivate: data['userIsPrivate'] as bool? ?? false,
     );
   }
 }

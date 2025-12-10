@@ -411,7 +411,16 @@ class _FeedScreenState extends State<FeedScreen> {
             return const Center(child: Text('Could not load feed.'));
           }
 
-          final docs = snapshot.data?.docs ?? [];
+          final allDocs = snapshot.data?.docs ?? [];
+
+          // Hide workouts where userIsPrivate == true
+          final docs = allDocs.where((doc) {
+            final data = doc.data();
+            final isPrivate = data['userIsPrivate'] as bool?;
+            // treat null / missing as public; only explicitly true is hidden
+            return isPrivate != true;
+          }).toList();
+
           if (docs.isEmpty) {
             return const Center(child: Text('No workouts in the feed yet.'));
           }

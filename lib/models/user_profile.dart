@@ -13,6 +13,12 @@ class UserProfile {
   final DateTime createdAt;
   final DateTime? lastLoginAt;
 
+  final bool privateProfile;
+  final bool pushNotifications;
+  final bool workoutReminders;
+  final bool socialUpdates;
+  final bool showStats;
+
   UserProfile({
     required this.uid,
     required this.email,
@@ -25,6 +31,11 @@ class UserProfile {
     this.photoUrl,
     required this.createdAt,
     this.lastLoginAt,
+    this.privateProfile = false,
+    this.pushNotifications = true,
+    this.workoutReminders = false,
+    this.socialUpdates = true,
+    this.showStats = true,
   });
 
   Map<String, dynamic> toMap() {
@@ -42,6 +53,13 @@ class UserProfile {
       'lastLoginAt': lastLoginAt != null
           ? Timestamp.fromDate(lastLoginAt!)
           : null,
+
+      // NEW: persist settings + privacy
+      'privateProfile': privateProfile,
+      'pushNotifications': pushNotifications,
+      'workoutReminders': workoutReminders,
+      'socialUpdates': socialUpdates,
+      'showStats': showStats,
     };
   }
 
@@ -49,6 +67,7 @@ class UserProfile {
     final data = doc.data()!;
     final createdTs = data['createdAt'] as Timestamp;
     final lastLoginTs = data['lastLoginAt'] as Timestamp?;
+
     return UserProfile(
       uid: data['uid'] as String,
       email: data['email'] as String,
@@ -61,6 +80,12 @@ class UserProfile {
       photoUrl: data['photoUrl'] as String?,
       createdAt: createdTs.toDate(),
       lastLoginAt: lastLoginTs?.toDate(),
+
+      privateProfile: data['privateProfile'] as bool? ?? false,
+      pushNotifications: data['pushNotifications'] as bool? ?? true,
+      workoutReminders: data['workoutReminders'] as bool? ?? false,
+      socialUpdates: data['socialUpdates'] as bool? ?? true,
+      showStats: data['showStats'] as bool? ?? true,
     );
   }
 }
