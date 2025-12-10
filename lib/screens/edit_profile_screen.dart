@@ -1,6 +1,10 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_storage/firebase_storage.dart';
+import 'package:image_picker/image_picker.dart';
 
 class EditProfileScreen extends StatefulWidget {
   const EditProfileScreen({super.key});
@@ -19,6 +23,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
   String? _selectedGoal;
   String? _experienceLevel;
+  String? _photoUrl;
 
   final List<String> _fitnessGoals = [
     'Lose Weight',
@@ -40,6 +45,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
   final _auth = FirebaseAuth.instance;
   final _db = FirebaseFirestore.instance;
+  final _picker = ImagePicker();
 
   @override
   void initState() {
@@ -58,7 +64,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     super.dispose();
   }
 
-  // load whatever is already in Firestore, but don't invent defaults
   Future<void> _loadProfile() async {
     final user = _auth.currentUser;
     if (user == null) {
@@ -107,6 +112,11 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         if (exp != null && exp.isNotEmpty) {
           _experienceLevel = exp;
         }
+
+        final photo = (data['photoUrl'] as String?)?.trim();
+        if (photo != null && photo.isNotEmpty) {
+          _photoUrl = photo;
+        }
       }
 
       setState(() {
@@ -120,7 +130,46 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     }
   }
 
-  // save only what the user actually typed/selected
+  Future<void> _pickAndUploadPhoto() async {
+    final user = _auth.currentUser;
+    if (user == null) return;
+
+    final picked = await _picker.pickImage(source: ImageSource.gallery);
+    if (picked == null) return;
+
+    setState(() {
+      _saving = true;
+      _error = null;
+    });
+
+    try {
+      final file = File(picked.path);
+      final ref = FirebaseStorage.instance
+          .ref()
+          .child('user_profile_photos')
+          .child('${user.uid}.jpg');
+
+      await ref.putFile(file);
+      final url = await ref.getDownloadURL();
+
+      await _db.collection('users').doc(user.uid).update({'photoUrl': url});
+
+      setState(() {
+        _photoUrl = url;
+      });
+    } catch (_) {
+      setState(() {
+        _error = 'Could not upload your photo. Try again.';
+      });
+    } finally {
+      if (mounted) {
+        setState(() {
+          _saving = false;
+        });
+      }
+    }
+  }
+
   Future<void> _saveProfile() async {
     final user = _auth.currentUser;
     if (user == null) return;
@@ -215,14 +264,19 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                   CircleAvatar(
                     radius: 50,
                     backgroundColor: Colors.grey[300],
-                    child: const Text(
-                      'BM',
-                      style: TextStyle(
-                        fontSize: 32,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.grey,
-                      ),
-                    ),
+                    backgroundImage: _photoUrl != null && _photoUrl!.isNotEmpty
+                        ? NetworkImage(_photoUrl!)
+                        : null,
+                    child: (_photoUrl == null || _photoUrl!.isEmpty)
+                        ? const Text(
+                            'BM',
+                            style: TextStyle(
+                              fontSize: 32,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.grey,
+                            ),
+                          )
+                        : null,
                   ),
                   Positioned(
                     bottom: 0,
@@ -240,9 +294,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                       ),
                       child: IconButton(
                         icon: const Icon(Icons.camera_alt, size: 20),
-                        onPressed: () {
-                          // we'll wire photo upload later
-                        },
+                        onPressed: _saving ? null : _pickAndUploadPhoto,
                       ),
                     ),
                   ),
@@ -250,14 +302,12 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
               ),
               const SizedBox(height: 8),
               TextButton.icon(
-                onPressed: () {},
+                onPressed: _saving ? null : _pickAndUploadPhoto,
                 icon: const Icon(Icons.camera_alt, size: 16),
                 label: const Text('Change Photo'),
                 style: TextButton.styleFrom(foregroundColor: Colors.grey[700]),
               ),
               const SizedBox(height: 32),
-
-              // Full name
               const Align(
                 alignment: Alignment.centerLeft,
                 child: Text(
@@ -271,8 +321,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                 decoration: _inputDecoration(),
               ),
               const SizedBox(height: 20),
-
-              // Username
               const Align(
                 alignment: Alignment.centerLeft,
                 child: Text(
@@ -286,8 +334,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                 decoration: _inputDecoration(),
               ),
               const SizedBox(height: 20),
-
-              // Bio
               const Align(
                 alignment: Alignment.centerLeft,
                 child: Text(
@@ -302,8 +348,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                 decoration: _inputDecoration(hint: 'Tell us about yourself...'),
               ),
               const SizedBox(height: 20),
-
-              // Age / Height
               Row(
                 children: [
                   Expanded(
@@ -352,8 +396,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                 ],
               ),
               const SizedBox(height: 16),
-
-              // Weight
               const Align(
                 alignment: Alignment.centerLeft,
                 child: Text(
@@ -370,8 +412,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                 decoration: _inputDecoration(),
               ),
               const SizedBox(height: 20),
-
-              // Fitness goal
               const Align(
                 alignment: Alignment.centerLeft,
                 child: Text(
@@ -404,8 +444,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                 ),
               ),
               const SizedBox(height: 20),
-
-              // Experience level
               const Align(
                 alignment: Alignment.centerLeft,
                 child: Text(
@@ -427,7 +465,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                 },
               ),
               const SizedBox(height: 32),
-
               SizedBox(
                 width: double.infinity,
                 height: 50,

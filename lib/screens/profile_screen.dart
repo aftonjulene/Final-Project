@@ -104,7 +104,11 @@ class ProfileScreen extends StatelessWidget {
               .take(2)
               .join();
 
-          final handle = '@${profile.email.split('@').first}';
+          final handle =
+              (profile.username != null && profile.username!.trim().isNotEmpty)
+              ? '@${profile.username!.trim()}'
+              : '@${profile.email.split('@').first}';
+
           final goalText = profile.goal ?? 'No goal set yet';
 
           return SingleChildScrollView(
@@ -115,14 +119,21 @@ class ProfileScreen extends StatelessWidget {
                   CircleAvatar(
                     radius: 50,
                     backgroundColor: Colors.grey[200],
-                    child: Text(
-                      initials.isEmpty ? 'BM' : initials,
-                      style: const TextStyle(
-                        fontSize: 32,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFF1a1d2e),
-                      ),
-                    ),
+                    backgroundImage:
+                        profile.photoUrl != null && profile.photoUrl!.isNotEmpty
+                        ? NetworkImage(profile.photoUrl!)
+                        : null,
+                    child:
+                        (profile.photoUrl == null || profile.photoUrl!.isEmpty)
+                        ? Text(
+                            initials.isEmpty ? 'BM' : initials,
+                            style: const TextStyle(
+                              fontSize: 32,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF1a1d2e),
+                            ),
+                          )
+                        : null,
                   ),
                   const SizedBox(height: 16),
                   Text(
@@ -146,7 +157,6 @@ class ProfileScreen extends StatelessWidget {
                     style: TextStyle(fontSize: 14, color: Colors.grey[700]),
                   ),
                   const SizedBox(height: 24),
-
                   SizedBox(
                     width: double.infinity,
                     child: OutlinedButton(
@@ -174,7 +184,6 @@ class ProfileScreen extends StatelessWidget {
                       ),
                     ),
                   ),
-
                   const SizedBox(height: 24),
                   StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
                     stream: workoutsStream,

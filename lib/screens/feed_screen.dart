@@ -50,7 +50,6 @@ class _FeedScreenState extends State<FeedScreen> {
     if (user == null || commentText.trim().isEmpty) return;
 
     try {
-      // Get user profile for display name
       final userDoc = await FirebaseFirestore.instance
           .collection('users')
           .doc(user.uid)
@@ -60,7 +59,6 @@ class _FeedScreenState extends State<FeedScreen> {
           user.email ??
           'Anonymous';
 
-      // Simple add without batch to avoid stream conflicts
       await FirebaseFirestore.instance
           .collection('workouts')
           .doc(workoutId)
@@ -89,14 +87,12 @@ class _FeedScreenState extends State<FeedScreen> {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return;
 
-    // Get the workout to check if user is the post owner
     final workoutDoc = await FirebaseFirestore.instance
         .collection('workouts')
         .doc(workoutId)
         .get();
     final workoutUserId = workoutDoc.data()?['userId'] as String?;
 
-    // Only post owner can like comments
     if (workoutUserId != user.uid) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -152,7 +148,6 @@ class _FeedScreenState extends State<FeedScreen> {
           builder: (context, scrollController) {
             return Column(
               children: [
-                // Header
                 Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
@@ -177,7 +172,6 @@ class _FeedScreenState extends State<FeedScreen> {
                     ],
                   ),
                 ),
-                // Comments list
                 Expanded(
                   child: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
                     stream: FirebaseFirestore.instance
@@ -212,7 +206,6 @@ class _FeedScreenState extends State<FeedScreen> {
                         return const Center(child: Text('No comments yet'));
                       }
 
-                      // Sort comments by createdAt client-side
                       final sortedComments = List.from(comments);
                       sortedComments.sort((a, b) {
                         final aTime = a.data()['createdAt'] as Timestamp?;
@@ -321,7 +314,6 @@ class _FeedScreenState extends State<FeedScreen> {
                     },
                   ),
                 ),
-                // Comment input
                 Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
@@ -413,11 +405,9 @@ class _FeedScreenState extends State<FeedScreen> {
 
           final allDocs = snapshot.data?.docs ?? [];
 
-          // Hide workouts where userIsPrivate == true
           final docs = allDocs.where((doc) {
             final data = doc.data();
             final isPrivate = data['userIsPrivate'] as bool?;
-            // treat null / missing as public; only explicitly true is hidden
             return isPrivate != true;
           }).toList();
 
@@ -472,7 +462,6 @@ class _FeedScreenState extends State<FeedScreen> {
       subtitle += ' • $goal';
     }
 
-    // Get comment count
     return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
       stream: FirebaseFirestore.instance
           .collection('workouts')
@@ -495,20 +484,57 @@ class _FeedScreenState extends State<FeedScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // User info
+                // User info row with profile image
                 Row(
                   children: [
-                    CircleAvatar(
-                      radius: 20,
-                      backgroundColor: Colors.grey[300],
-                      child: Text(
-                        userName.isNotEmpty ? userName[0].toUpperCase() : 'B',
-                        style: const TextStyle(
-                          fontWeight: FontWeight.bold,
-                          color: Colors.grey,
+                    if (postOwnerId.isEmpty)
+                      CircleAvatar(
+                        radius: 20,
+                        backgroundColor: Colors.grey[300],
+                        child: Text(
+                          userName.isNotEmpty ? userName[0].toUpperCase() : 'B',
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: Colors.grey,
+                          ),
                         ),
+                      )
+                    else
+                      FutureBuilder<DocumentSnapshot<Map<String, dynamic>>>(
+                        future: FirebaseFirestore.instance
+                            .collection('users')
+                            .doc(postOwnerId)
+                            .get(),
+                        builder: (context, snapshot) {
+                          String? photoUrl;
+                          if (snapshot.hasData &&
+                              snapshot.data!.data() != null) {
+                            photoUrl =
+                                snapshot.data!.data()!['photoUrl'] as String?;
+                          }
+
+                          if (photoUrl != null && photoUrl.isNotEmpty) {
+                            return CircleAvatar(
+                              radius: 20,
+                              backgroundImage: NetworkImage(photoUrl),
+                            );
+                          }
+
+                          return CircleAvatar(
+                            radius: 20,
+                            backgroundColor: Colors.grey[300],
+                            child: Text(
+                              userName.isNotEmpty
+                                  ? userName[0].toUpperCase()
+                                  : 'B',
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                color: Colors.grey,
+                              ),
+                            ),
+                          );
+                        },
                       ),
-                    ),
                     const SizedBox(width: 12),
                     Expanded(
                       child: Column(
@@ -534,7 +560,6 @@ class _FeedScreenState extends State<FeedScreen> {
                   ],
                 ),
                 const SizedBox(height: 16),
-                // Workout title
                 Text(
                   title,
                   style: const TextStyle(
@@ -550,7 +575,6 @@ class _FeedScreenState extends State<FeedScreen> {
                   ),
                 ],
                 const SizedBox(height: 16),
-                // Like and comment buttons working
                 Row(
                   children: [
                     GestureDetector(
@@ -578,10 +602,10 @@ class _FeedScreenState extends State<FeedScreen> {
                       onTap: () => _showCommentsDialog(workoutId, postOwnerId),
                       child: Row(
                         children: [
-                          Icon(
+                          const Icon(
                             Icons.chat_bubble_outline,
                             size: 20,
-                            color: const Color.fromARGB(159, 0, 0, 0),
+                            color: Color.fromARGB(159, 0, 0, 0),
                           ),
                           const SizedBox(width: 4),
                           Text(

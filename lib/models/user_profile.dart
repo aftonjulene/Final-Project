@@ -4,6 +4,7 @@ class UserProfile {
   final String uid;
   final String email;
   final String? displayName;
+  final String? username;
   final int? age;
   final double? heightCm;
   final double? weightKg;
@@ -23,6 +24,7 @@ class UserProfile {
     required this.uid,
     required this.email,
     this.displayName,
+    this.username,
     this.age,
     this.heightCm,
     this.weightKg,
@@ -54,7 +56,6 @@ class UserProfile {
           ? Timestamp.fromDate(lastLoginAt!)
           : null,
 
-      // NEW: persist settings + privacy
       'privateProfile': privateProfile,
       'pushNotifications': pushNotifications,
       'workoutReminders': workoutReminders,
@@ -72,6 +73,7 @@ class UserProfile {
       uid: data['uid'] as String,
       email: data['email'] as String,
       displayName: (data['displayName'] ?? data['name']) as String?,
+      username: data['username'] as String?,
       age: data['age'] as int?,
       heightCm: (data['heightCm'] as num?)?.toDouble(),
       weightKg: (data['weightKg'] as num?)?.toDouble(),
