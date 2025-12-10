@@ -27,17 +27,13 @@ class BeastModeApp extends StatelessWidget {
         ),
         useMaterial3: true,
         scaffoldBackgroundColor: Colors.white,
-        iconTheme: const IconThemeData(
-          color: Color(0xFF1a1d2e),
-        ),
+        iconTheme: const IconThemeData(color: Color(0xFF1a1d2e)),
         appBarTheme: const AppBarTheme(
           backgroundColor: Colors.white,
           elevation: 0,
           foregroundColor: Color(0xFF1a1d2e),
           centerTitle: false,
-          iconTheme: IconThemeData(
-            color: Color(0xFF1a1d2e),
-          ),
+          iconTheme: IconThemeData(color: Color(0xFF1a1d2e)),
         ),
         elevatedButtonTheme: ElevatedButtonThemeData(
           style: ElevatedButton.styleFrom(

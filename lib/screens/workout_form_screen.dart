@@ -6,7 +6,7 @@ import '../models/exercise.dart';
 import '../services/challenge_service.dart';
 
 class WorkoutFormScreen extends StatefulWidget {
-  const WorkoutFormScreen({Key? key}) : super(key: key);
+  const WorkoutFormScreen({super.key});
 
   @override
   State<WorkoutFormScreen> createState() => _WorkoutFormScreenState();

@@ -55,11 +55,19 @@ class ProfileScreen extends StatelessWidget {
     final user = FirebaseAuth.instance.currentUser;
 
     if (user == null) {
-      // If somehow we hit ProfileScreen without a user, just go to LoginScreen
       return const LoginScreen();
     }
 
     final docRef = FirebaseFirestore.instance.collection('users').doc(user.uid);
+    final workoutsStream = FirebaseFirestore.instance
+        .collection('workouts')
+        .where('userId', isEqualTo: user.uid)
+        .snapshots();
+    final challengesStream = FirebaseFirestore.instance
+        .collection('challengeParticipants')
+        .where('userId', isEqualTo: user.uid)
+        .where('completed', isEqualTo: true)
+        .snapshots();
 
     return Scaffold(
       appBar: AppBar(
@@ -76,7 +84,9 @@ class ProfileScreen extends StatelessWidget {
         stream: docRef.snapshots(),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
+            return const Center(
+              child: CircularProgressIndicator(strokeWidth: 2),
+            );
           }
 
           if (!snapshot.hasData || !snapshot.data!.exists) {
@@ -104,13 +114,13 @@ class ProfileScreen extends StatelessWidget {
                 children: [
                   CircleAvatar(
                     radius: 50,
-                    backgroundColor: Colors.grey[300],
+                    backgroundColor: Colors.grey[200],
                     child: Text(
                       initials.isEmpty ? 'BM' : initials,
                       style: const TextStyle(
                         fontSize: 32,
                         fontWeight: FontWeight.bold,
-                        color: Colors.grey,
+                        color: Color(0xFF1a1d2e),
                       ),
                     ),
                   ),
@@ -126,10 +136,17 @@ class ProfileScreen extends StatelessWidget {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    '$handle • $goalText',
-                    style: const TextStyle(fontSize: 14, color: Colors.grey),
+                    handle,
+                    style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    goalText,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(fontSize: 14, color: Colors.grey[700]),
                   ),
                   const SizedBox(height: 24),
+
                   SizedBox(
                     width: double.infinity,
                     child: OutlinedButton(
@@ -157,23 +174,41 @@ class ProfileScreen extends StatelessWidget {
                       ),
                     ),
                   ),
+
                   const SizedBox(height: 24),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                    children: [
-                      SimpleStatCard(
-                        value: (data['workoutCount'] ?? 0).toString(),
-                        label: 'Workouts',
-                      ),
-                      SimpleStatCard(
-                        value: (data['streak'] ?? 0).toString(),
-                        label: 'Day Streak',
-                      ),
-                      SimpleStatCard(
-                        value: (data['prs'] ?? 0).toString(),
-                        label: 'PRs',
-                      ),
-                    ],
+                  StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+                    stream: workoutsStream,
+                    builder: (context, workoutSnap) {
+                      final workouts = workoutSnap.data?.docs ?? [];
+                      final workoutCount = workouts.length;
+                      final streak = _calculateStreak(workouts);
+
+                      return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+                        stream: challengesStream,
+                        builder: (context, challengeSnap) {
+                          final challengesDocs = challengeSnap.data?.docs ?? [];
+                          final challengesCompleted = challengesDocs.length;
+
+                          return Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                            children: [
+                              SimpleStatCard(
+                                value: workoutCount.toString(),
+                                label: 'Workouts',
+                              ),
+                              SimpleStatCard(
+                                value: streak.toString(),
+                                label: 'Day Streak',
+                              ),
+                              SimpleStatCard(
+                                value: challengesCompleted.toString(),
+                                label: 'Challenges',
+                              ),
+                            ],
+                          );
+                        },
+                      );
+                    },
                   ),
                   const SizedBox(height: 24),
                   _buildMenuButton(
@@ -208,51 +243,7 @@ class ProfileScreen extends StatelessWidget {
                     onTap: () {
                       _handleLogout(context);
                     },
-                  ),
-                  const SizedBox(height: 24),
-                  const Align(
-                    alignment: Alignment.centerLeft,
-                    child: Text(
-                      'Recent Workouts',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      border: Border.all(color: Colors.grey[300]!),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: const [
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Sample Workout',
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                            SizedBox(height: 4),
-                            Text(
-                              'Will show last real workout soon',
-                              style: TextStyle(
-                                fontSize: 14,
-                                color: Colors.grey,
-                              ),
-                            ),
-                          ],
-                        ),
-                        Icon(Icons.chevron_right, color: Colors.grey),
-                      ],
-                    ),
+                    isDestructive: true,
                   ),
                 ],
               ),
@@ -263,41 +254,107 @@ class ProfileScreen extends StatelessWidget {
     );
   }
 
+  int _calculateStreak(
+    List<QueryDocumentSnapshot<Map<String, dynamic>>> workouts,
+  ) {
+    if (workouts.isEmpty) return 0;
+
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+
+    final workoutDates =
+        workouts
+            .map((doc) {
+              final ts = doc.data()['date'];
+              if (ts is! Timestamp) return null;
+              final date = ts.toDate();
+              return DateTime(date.year, date.month, date.day);
+            })
+            .whereType<DateTime>()
+            .toSet()
+            .toList()
+          ..sort((a, b) => b.compareTo(a));
+
+    if (workoutDates.isEmpty) return 0;
+
+    int streak = 0;
+    DateTime checkDate = today;
+
+    if (workoutDates.first.isBefore(today)) {
+      checkDate = today.subtract(const Duration(days: 1));
+    }
+
+    for (final workoutDate in workoutDates) {
+      if (workoutDate.isAtSameMomentAs(checkDate) ||
+          workoutDate.isAfter(checkDate)) {
+        streak++;
+        checkDate = checkDate.subtract(const Duration(days: 1));
+      } else {
+        break;
+      }
+    }
+
+    return streak;
+  }
 
   Widget _buildMenuButton({
     required IconData icon,
     required String title,
     required VoidCallback onTap,
+    bool isDestructive = false,
   }) {
+    const primary = Color(0xFF1a1d2e);
+
     return InkWell(
       onTap: onTap,
+      borderRadius: BorderRadius.circular(14),
       child: Container(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
         decoration: BoxDecoration(
-          border: Border.all(color: Colors.grey[300]!),
-          borderRadius: BorderRadius.circular(8),
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(
+            color: isDestructive
+                ? const Color.fromARGB(129, 244, 67, 54)
+                : Colors.grey[300]!,
+            width: 1,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.03),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
         ),
         child: Row(
           children: [
             Container(
-              padding: const EdgeInsets.all(8),
+              width: 40,
+              height: 40,
+              alignment: Alignment.center,
               decoration: BoxDecoration(
-                color: Colors.grey[200],
-                borderRadius: BorderRadius.circular(8),
+                color: isDestructive ? Colors.red : Colors.black,
+                borderRadius: BorderRadius.circular(10),
               ),
-              child: Icon(icon, size: 20),
+              child: Icon(icon, size: 22, color: Colors.white),
             ),
-            const SizedBox(width: 16),
+            const SizedBox(width: 14),
             Expanded(
               child: Text(
                 title,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 16,
-                  fontWeight: FontWeight.w500,
+                  fontWeight: FontWeight.w600,
+                  color: isDestructive ? Colors.red : primary,
                 ),
               ),
             ),
-            Icon(Icons.chevron_right, color: Colors.grey[400]),
+            Icon(
+              Icons.chevron_right,
+              color: isDestructive ? Colors.red : Colors.grey[600],
+              size: 22,
+            ),
           ],
         ),
       ),

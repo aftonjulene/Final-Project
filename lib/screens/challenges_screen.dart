@@ -229,12 +229,12 @@ class ChallengesScreen extends StatelessWidget {
                   ),
                   Text(
                     joined
-                        ? (participant!.completed ? 'Completed' : 'In progress')
+                        ? (participant.completed ? 'Completed' : 'In progress')
                         : 'Not joined',
                     style: TextStyle(
                       fontSize: 14,
                       color: joined
-                          ? (participant!.completed
+                          ? (participant.completed
                                 ? Colors.green
                                 : Colors.grey[600])
                           : Colors.grey[600],
