@@ -41,14 +41,30 @@ class _LoginScreenState extends State<LoginScreen> {
 
       if (!mounted) return;
 
-      // after login, start fresh at main navigation
       Navigator.of(context).pushAndRemoveUntil(
         MaterialPageRoute(builder: (_) => const MainNavigation()),
         (route) => false,
       );
     } on FirebaseAuthException catch (e) {
+      String message;
+      switch (e.code) {
+        case 'user-not-found':
+          message = 'No account found with that email.';
+          break;
+        case 'wrong-password':
+          message = 'Incorrect password. Try again.';
+          break;
+        case 'invalid-email':
+          message = 'Please enter a valid email address.';
+          break;
+        case 'user-disabled':
+          message = 'This account has been disabled.';
+          break;
+        default:
+          message = 'Login failed. Check your email and password.';
+      }
       setState(() {
-        _error = e.message ?? 'Login failed. Check your email and password.';
+        _error = message;
       });
     } catch (_) {
       setState(() {
@@ -164,9 +180,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 Align(
                   alignment: Alignment.centerLeft,
                   child: TextButton(
-                    onPressed: () {
-                      // hook up password reset later if you want
-                    },
+                    onPressed: () {},
                     child: const Text(
                       'Forgot Password?',
                       style: TextStyle(color: Colors.grey, fontSize: 14),

@@ -1,23 +1,92 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
+
 import 'firebase_options.dart';
 import 'screens/login_screen.dart';
 import 'screens/signup_screen.dart';
 import 'screens/home_screen.dart';
 import 'screens/workout_history_screen.dart';
 
+final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
+
+Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  print('background message ${message.notification?.body}');
+}
+
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+
+  FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
+
   runApp(const BeastModeApp());
 }
 
-class BeastModeApp extends StatelessWidget {
+class BeastModeApp extends StatefulWidget {
   const BeastModeApp({super.key});
+
+  @override
+  State<BeastModeApp> createState() => _BeastModeAppState();
+}
+
+class _BeastModeAppState extends State<BeastModeApp> {
+  late FirebaseMessaging messaging;
+
+  @override
+  void initState() {
+    super.initState();
+
+    messaging = FirebaseMessaging.instance;
+
+    messaging.subscribeToTopic("messaging");
+
+    messaging.getToken().then((value) {
+      print("FCM Token: $value");
+    });
+
+    FirebaseMessaging.onMessage.listen((RemoteMessage event) {
+      print("Foreground message: ${event.notification?.title}");
+      print("message received");
+      print(event.notification?.body);
+      print(event.data.values);
+
+      final ctx = navigatorKey.currentContext;
+      if (ctx == null) {
+        print('No navigator context available for dialog yet');
+        return;
+      }
+
+      showDialog(
+        context: ctx,
+        builder: (BuildContext context) {
+          return AlertDialog(
+            title: const Text("Notification"),
+            content: Text(event.notification?.body ?? "No body"),
+            actions: [
+              TextButton(
+                child: const Text("Ok"),
+                onPressed: () {
+                  Navigator.of(context).pop();
+                },
+              ),
+            ],
+          );
+        },
+      );
+    });
+
+    FirebaseMessaging.onMessageOpenedApp.listen((message) {
+      print('Message clicked!');
+      // later you can navigate somewhere based on message.data
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      navigatorKey: navigatorKey,
       title: 'BEAST MODE',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
