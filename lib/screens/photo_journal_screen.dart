@@ -6,6 +6,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'dart:io';
 import 'dart:typed_data';
+import 'dart:ui';
 
 class PhotoJournalScreen extends StatefulWidget {
   const PhotoJournalScreen({super.key});
@@ -53,13 +54,12 @@ class _PhotoJournalScreenState extends State<PhotoJournalScreen> {
       showDialog(
         context: context,
         barrierDismissible: false,
-        builder: (context) => const Center(
-          child: CircularProgressIndicator(),
-        ),
+        builder: (context) => const Center(child: CircularProgressIndicator()),
       );
 
       // Upload to Firebase Storage
-      final String fileName = '${user.uid}_${DateTime.now().millisecondsSinceEpoch}.jpg';
+      final String fileName =
+          '${user.uid}_${DateTime.now().millisecondsSinceEpoch}.jpg';
       final Reference storageRef = FirebaseStorage.instance
           .ref()
           .child('photo_journal')
@@ -78,7 +78,7 @@ class _PhotoJournalScreenState extends State<PhotoJournalScreen> {
         File imageFile = File(image.path);
         uploadTask = storageRef.putFile(imageFile);
       }
-      
+
       final TaskSnapshot snapshot = await uploadTask;
       final String downloadUrl = await snapshot.ref.getDownloadURL();
 
@@ -118,10 +118,7 @@ class _PhotoJournalScreenState extends State<PhotoJournalScreen> {
             ),
             TextButton(
               onPressed: () => Navigator.pop(context, true),
-              child: const Text(
-                'Delete',
-                style: TextStyle(color: Colors.red),
-              ),
+              child: const Text('Delete', style: TextStyle(color: Colors.red)),
             ),
           ],
         );
@@ -139,8 +136,9 @@ class _PhotoJournalScreenState extends State<PhotoJournalScreen> {
 
       // Delete from Storage
       try {
-        final Reference storageRef =
-            FirebaseStorage.instance.refFromURL(imageUrl);
+        final Reference storageRef = FirebaseStorage.instance.refFromURL(
+          imageUrl,
+        );
         await storageRef.delete();
       } catch (_) {
         // If storage delete fails, continue (might be a URL issue)
@@ -182,7 +180,9 @@ class _PhotoJournalScreenState extends State<PhotoJournalScreen> {
                   ),
                 ListTile(
                   leading: Icon(kIsWeb ? Icons.folder : Icons.photo_library),
-                  title: Text(kIsWeb ? 'Choose from Files' : 'Choose from Gallery'),
+                  title: Text(
+                    kIsWeb ? 'Choose from Files' : 'Choose from Gallery',
+                  ),
                   onTap: () {
                     Navigator.pop(context);
                     _pickImage(ImageSource.gallery);
@@ -278,9 +278,7 @@ class _PhotoJournalScreenState extends State<PhotoJournalScreen> {
           }
 
           if (snapshot.hasError) {
-            return Center(
-              child: Text('Error: ${snapshot.error}'),
-            );
+            return Center(child: Text('Error: ${snapshot.error}'));
           }
 
           final photos = snapshot.data?.docs ?? [];
@@ -307,10 +305,7 @@ class _PhotoJournalScreenState extends State<PhotoJournalScreen> {
                   const SizedBox(height: 8),
                   Text(
                     'Tap the + button to add your first photo',
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: Colors.grey[500],
-                    ),
+                    style: TextStyle(fontSize: 14, color: Colors.grey[500]),
                   ),
                 ],
               ),
@@ -360,10 +355,41 @@ class _PhotoJournalScreenState extends State<PhotoJournalScreen> {
     DateTime? date,
     String docId,
   ) {
+    return _PhotoCard(
+      imageUrl: imageUrl,
+      date: date,
+      docId: docId,
+      onDelete: _deletePhoto,
+    );
+  }
+}
+
+class _PhotoCard extends StatefulWidget {
+  final String? imageUrl;
+  final DateTime? date;
+  final String docId;
+  final Future<void> Function(String docId, String imageUrl) onDelete;
+
+  const _PhotoCard({
+    required this.imageUrl,
+    required this.date,
+    required this.docId,
+    required this.onDelete,
+  });
+
+  @override
+  State<_PhotoCard> createState() => _PhotoCardState();
+}
+
+class _PhotoCardState extends State<_PhotoCard> {
+  bool _isBlurred = false;
+
+  @override
+  Widget build(BuildContext context) {
     return GestureDetector(
       onLongPress: () {
-        if (imageUrl != null) {
-          _deletePhoto(docId, imageUrl);
+        if (widget.imageUrl != null) {
+          widget.onDelete(widget.docId, widget.imageUrl!);
         }
       },
       child: Container(
@@ -372,33 +398,39 @@ class _PhotoJournalScreenState extends State<PhotoJournalScreen> {
           borderRadius: BorderRadius.circular(8),
           border: Border.all(color: Colors.grey[300]!),
         ),
-        child: imageUrl != null
+        child: widget.imageUrl != null
             ? ClipRRect(
                 borderRadius: BorderRadius.circular(8),
                 child: Stack(
                   fit: StackFit.expand,
                   children: [
-                    Image.network(
-                      imageUrl,
-                      fit: BoxFit.cover,
-                      loadingBuilder: (context, child, loadingProgress) {
-                        if (loadingProgress == null) return child;
-                        return Center(
-                          child: CircularProgressIndicator(
-                            value: loadingProgress.expectedTotalBytes != null
-                                ? loadingProgress.cumulativeBytesLoaded /
-                                    loadingProgress.expectedTotalBytes!
-                                : null,
-                          ),
-                        );
-                      },
-                      errorBuilder: (context, error, stackTrace) {
-                        return const Center(
-                          child: Icon(Icons.error, color: Colors.red),
-                        );
-                      },
+                    ImageFiltered(
+                      imageFilter: ImageFilter.blur(
+                        sigmaX: _isBlurred ? 8.0 : 0.0,
+                        sigmaY: _isBlurred ? 8.0 : 0.0,
+                      ),
+                      child: Image.network(
+                        widget.imageUrl!,
+                        fit: BoxFit.cover,
+                        loadingBuilder: (context, child, loadingProgress) {
+                          if (loadingProgress == null) return child;
+                          return Center(
+                            child: CircularProgressIndicator(
+                              value: loadingProgress.expectedTotalBytes != null
+                                  ? loadingProgress.cumulativeBytesLoaded /
+                                        loadingProgress.expectedTotalBytes!
+                                  : null,
+                            ),
+                          );
+                        },
+                        errorBuilder: (context, error, stackTrace) {
+                          return const Center(
+                            child: Icon(Icons.error, color: Colors.red),
+                          );
+                        },
+                      ),
                     ),
-                    if (date != null)
+                    if (widget.date != null)
                       Positioned(
                         bottom: 0,
                         left: 0,
@@ -413,7 +445,7 @@ class _PhotoJournalScreenState extends State<PhotoJournalScreen> {
                             ),
                           ),
                           child: Text(
-                            '${date.month}/${date.day}',
+                            '${widget.date!.month}/${widget.date!.day}',
                             style: const TextStyle(
                               fontSize: 10,
                               color: Colors.white,
@@ -423,6 +455,43 @@ class _PhotoJournalScreenState extends State<PhotoJournalScreen> {
                           ),
                         ),
                       ),
+                    Positioned(
+                      top: 4,
+                      right: 4,
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          IconButton(
+                            padding: EdgeInsets.zero,
+                            constraints: const BoxConstraints(),
+                            icon: Icon(
+                              _isBlurred ? Icons.blur_off : Icons.blur_on,
+                              color: Colors.white,
+                              size: 18,
+                            ),
+                            onPressed: () {
+                              setState(() {
+                                _isBlurred = !_isBlurred;
+                              });
+                            },
+                          ),
+                          IconButton(
+                            padding: const EdgeInsets.only(left: 4),
+                            constraints: const BoxConstraints(),
+                            icon: const Icon(
+                              Icons.delete,
+                              color: Colors.redAccent,
+                              size: 18,
+                            ),
+                            onPressed: () {
+                              if (widget.imageUrl != null) {
+                                widget.onDelete(widget.docId, widget.imageUrl!);
+                              }
+                            },
+                          ),
+                        ],
+                      ),
+                    ),
                   ],
                 ),
               )
