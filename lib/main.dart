@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
+import 'dart:async';
 
 import 'firebase_options.dart';
 import 'screens/login_screen.dart';
@@ -17,6 +18,9 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  
+  // Initialize Firebase in parallel with app startup where possible
+  // This is already optimized - Firebase initialization is required before runApp
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
   FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
@@ -33,6 +37,8 @@ class BeastModeApp extends StatefulWidget {
 
 class _BeastModeAppState extends State<BeastModeApp> {
   late FirebaseMessaging messaging;
+  StreamSubscription<RemoteMessage>? _onMessageSubscription;
+  StreamSubscription<RemoteMessage>? _onMessageOpenedAppSubscription;
 
   @override
   void initState() {
@@ -46,7 +52,7 @@ class _BeastModeAppState extends State<BeastModeApp> {
       print("FCM Token: $value");
     });
 
-    FirebaseMessaging.onMessage.listen((RemoteMessage event) {
+    _onMessageSubscription = FirebaseMessaging.onMessage.listen((RemoteMessage event) {
       print("Foreground message: ${event.notification?.title}");
       print("message received");
       print(event.notification?.body);
@@ -77,10 +83,17 @@ class _BeastModeAppState extends State<BeastModeApp> {
       );
     });
 
-    FirebaseMessaging.onMessageOpenedApp.listen((message) {
+    _onMessageOpenedAppSubscription = FirebaseMessaging.onMessageOpenedApp.listen((message) {
       print('Message clicked!');
       // later you can navigate somewhere based on message.data
     });
+  }
+
+  @override
+  void dispose() {
+    _onMessageSubscription?.cancel();
+    _onMessageOpenedAppSubscription?.cancel();
+    super.dispose();
   }
 
   @override

@@ -4,6 +4,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'dart:io';
 import 'dart:typed_data';
 import 'dart:ui';
@@ -409,25 +410,17 @@ class _PhotoCardState extends State<_PhotoCard> {
                         sigmaX: _isBlurred ? 8.0 : 0.0,
                         sigmaY: _isBlurred ? 8.0 : 0.0,
                       ),
-                      child: Image.network(
-                        widget.imageUrl!,
+                      child: CachedNetworkImage(
+                        imageUrl: widget.imageUrl!,
                         fit: BoxFit.cover,
-                        loadingBuilder: (context, child, loadingProgress) {
-                          if (loadingProgress == null) return child;
-                          return Center(
-                            child: CircularProgressIndicator(
-                              value: loadingProgress.expectedTotalBytes != null
-                                  ? loadingProgress.cumulativeBytesLoaded /
-                                        loadingProgress.expectedTotalBytes!
-                                  : null,
-                            ),
-                          );
-                        },
-                        errorBuilder: (context, error, stackTrace) {
-                          return const Center(
-                            child: Icon(Icons.error, color: Colors.red),
-                          );
-                        },
+                        placeholder: (context, url) => const Center(
+                          child: CircularProgressIndicator(),
+                        ),
+                        errorWidget: (context, url, error) => const Center(
+                          child: Icon(Icons.error, color: Colors.red),
+                        ),
+                        memCacheWidth: 300,
+                        memCacheHeight: 300,
                       ),
                     ),
                     if (widget.date != null)

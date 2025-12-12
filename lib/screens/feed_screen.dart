@@ -1,6 +1,8 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:cached_network_image/cached_network_image.dart';
+import 'dart:async';
 import '../services/notification_service.dart';
 import 'notifications_screen.dart';
 
@@ -12,11 +14,13 @@ class FeedScreen extends StatefulWidget {
 }
 
 class _FeedScreenState extends State<FeedScreen> {
+  static const int _pageSize = 20;
+
   Stream<QuerySnapshot<Map<String, dynamic>>> _feedStream() {
     return FirebaseFirestore.instance
         .collection('workouts')
         .orderBy('date', descending: true)
-        .limit(30)
+        .limit(_pageSize)
         .snapshots();
   }
 
@@ -130,6 +134,14 @@ class _FeedScreenState extends State<FeedScreen> {
               'likes': <String>[],
               'createdAt': Timestamp.now(),
             });
+
+        // Update comment count in workout document (optimization)
+        final workoutRef = FirebaseFirestore.instance
+            .collection('workouts')
+            .doc(workoutId);
+        final workoutDoc = await workoutRef.get();
+        final currentCount = workoutDoc.data()?['commentCount'] as int? ?? 0;
+        await workoutRef.update({'commentCount': currentCount + 1});
 
         
         await NotificationService.createCommentNotification(
@@ -392,12 +404,6 @@ class _FeedScreenState extends State<FeedScreen> {
 
   void _showCommentsDialog(String workoutId, String postOwnerId) {
     final user = FirebaseAuth.instance.currentUser;
-    final commentController = TextEditingController();
-    
-    
-    final replyingToCommentId = ValueNotifier<String?>(null);
-    final replyingToUserName = ValueNotifier<String?>(null);
-    final replyingToCommentOwnerId = ValueNotifier<String?>(null);
 
     showModalBottomSheet(
       context: context,
@@ -406,226 +412,12 @@ class _FeedScreenState extends State<FeedScreen> {
         borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
       ),
       builder: (context) {
-        return Padding(
-          padding: EdgeInsets.only(
-            bottom: MediaQuery.of(context).viewInsets.bottom,
-          ),
-          child: DraggableScrollableSheet(
-            initialChildSize: 0.7,
-            minChildSize: 0.5,
-            maxChildSize: 0.95,
-            expand: false,
-            builder: (context, scrollController) {
-              return ValueListenableBuilder<String?>(
-                valueListenable: replyingToCommentId,
-                builder: (context, currentReplyId, _) {
-                  return Column(
-                    children: [
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    border: Border(
-                      bottom: BorderSide(color: Colors.grey[300]!),
-                    ),
-                  ),
-                  child: Row(
-                    children: [
-                      const Text(
-                        'Comments',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const Spacer(),
-                      IconButton(
-                        icon: const Icon(Icons.close),
-                        onPressed: () => Navigator.pop(context),
-                      ),
-                    ],
-                  ),
-                ),
-                Expanded(
-                  child: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-                    stream: FirebaseFirestore.instance
-                        .collection('workouts')
-                        .doc(workoutId)
-                        .collection('comments')
-                        .snapshots(includeMetadataChanges: false),
-                    builder: (context, snapshot) {
-                      if (snapshot.connectionState == ConnectionState.waiting) {
-                        return const Center(child: CircularProgressIndicator());
-                      }
-
-                      if (snapshot.hasError) {
-                        return Center(
-                          child: Padding(
-                            padding: const EdgeInsets.all(16.0),
-                            child: Text(
-                              'Error loading comments: ${snapshot.error}',
-                              textAlign: TextAlign.center,
-                            ),
-                          ),
-                        );
-                      }
-
-                      if (!snapshot.hasData) {
-                        return const Center(child: Text('No comments yet'));
-                      }
-
-                      final comments = snapshot.data!.docs;
-
-                      if (comments.isEmpty) {
-                        return const Center(child: Text('No comments yet'));
-                      }
-
-                      final sortedComments = List.from(comments);
-                      sortedComments.sort((a, b) {
-                        final aTime = a.data()['createdAt'] as Timestamp?;
-                        final bTime = b.data()['createdAt'] as Timestamp?;
-                        if (aTime == null && bTime == null) return 0;
-                        if (aTime == null) return 1;
-                        if (bTime == null) return -1;
-                        return aTime.compareTo(bTime);
-                      });
-
-                      return ListView.builder(
-                        controller: scrollController,
-                        padding: const EdgeInsets.all(16),
-                        itemCount: sortedComments.length,
-                        itemBuilder: (context, index) {
-                          final comment = sortedComments[index].data();
-                          final commentId = sortedComments[index].id;
-                          final commentOwnerId = comment['userId'] as String? ?? '';
-                          final likes = List<dynamic>.from(
-                            comment['likes'] as List? ?? [],
-                          );
-                          final isLikedByOwner =
-                              user?.uid == postOwnerId &&
-                              likes.contains(user?.uid);
-
-                          return _buildCommentWidget(
-                            workoutId: workoutId,
-                            commentId: commentId,
-                            comment: comment,
-                            commentOwnerId: commentOwnerId,
-                            postOwnerId: postOwnerId,
-                            isLikedByOwner: isLikedByOwner,
-                            likes: likes,
-                            onReply: () {
-                              replyingToCommentId.value = commentId;
-                              replyingToUserName.value = comment['userName'] as String? ?? 'Anonymous';
-                              replyingToCommentOwnerId.value = commentOwnerId;
-                              commentController.clear();
-                            },
-                            user: user,
-                          );
-                        },
-                      );
-                    },
-                  ),
-                ),
-                  if (currentReplyId != null)
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                      color: Colors.blue[50],
-                      child: Row(
-                        children: [
-                          Icon(Icons.reply, size: 16, color: Colors.blue[700]),
-                          const SizedBox(width: 8),
-                          Text(
-                            'Replying to ${replyingToUserName.value ?? 'comment'}',
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: Colors.blue[700],
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                          const Spacer(),
-                          TextButton(
-                            onPressed: () {
-                              replyingToCommentId.value = null;
-                              replyingToUserName.value = null;
-                              replyingToCommentOwnerId.value = null;
-                              commentController.clear();
-                            },
-                            child: const Text('Cancel'),
-                          ),
-                        ],
-                      ),
-                    ),
-                  Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      border: Border(top: BorderSide(color: Colors.grey[300]!)),
-                      color: Colors.white,
-                    ),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: TextField(
-                            controller: commentController,
-                            decoration: InputDecoration(
-                              hintText: currentReplyId != null
-                                  ? 'Write a reply...'
-                                  : 'Write a comment...',
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(24),
-                                borderSide: BorderSide(color: Colors.grey[300]!),
-                              ),
-                              contentPadding: const EdgeInsets.symmetric(
-                                horizontal: 16,
-                                vertical: 8,
-                              ),
-                            ),
-                            maxLines: null,
-                            textInputAction: TextInputAction.send,
-                            onSubmitted: (value) {
-                              if (value.trim().isNotEmpty) {
-                                _addComment(
-                                  workoutId,
-                                  value,
-                                  postOwnerId,
-                                  parentCommentId: replyingToCommentId.value,
-                                  parentCommentOwnerId: replyingToCommentOwnerId.value,
-                                );
-                                commentController.clear();
-                                replyingToCommentId.value = null;
-                                replyingToUserName.value = null;
-                                replyingToCommentOwnerId.value = null;
-                              }
-                            },
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        IconButton(
-                          icon: const Icon(Icons.send),
-                          color: const Color(0xFF1a1d2e),
-                          onPressed: () {
-                            if (commentController.text.trim().isNotEmpty) {
-                              _addComment(
-                                workoutId,
-                                commentController.text,
-                                postOwnerId,
-                                parentCommentId: replyingToCommentId.value,
-                                parentCommentOwnerId: replyingToCommentOwnerId.value,
-                              );
-                              commentController.clear();
-                              replyingToCommentId.value = null;
-                              replyingToUserName.value = null;
-                              replyingToCommentOwnerId.value = null;
-                            }
-                          },
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-                  );
-                },
-              );
-            },
-          ),
+        return _CommentsDialogContent(
+          workoutId: workoutId,
+          postOwnerId: postOwnerId,
+          user: user,
+          onAddComment: _addComment,
+          buildCommentWidget: _buildCommentWidget,
         );
       },
     );
@@ -776,9 +568,9 @@ class _FeedScreenState extends State<FeedScreen> {
           }
 
           return ListView.builder(
-        padding: const EdgeInsets.all(16.0),
+            padding: const EdgeInsets.all(16.0),
             itemCount: docs.length,
-        itemBuilder: (context, index) {
+            itemBuilder: (context, index) {
               final doc = docs[index];
               final data = doc.data();
               return _buildFeedCard(doc.id, data, user.uid);
@@ -822,14 +614,9 @@ class _FeedScreenState extends State<FeedScreen> {
       subtitle += ' • $goal';
     }
 
-    return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-      stream: FirebaseFirestore.instance
-          .collection('workouts')
-          .doc(workoutId)
-          .collection('comments')
-          .snapshots(),
-      builder: (context, commentSnapshot) {
-        final commentCount = commentSnapshot.data?.docs.length ?? 0;
+    // Use cached comment count from data if available, otherwise show placeholder
+    // This avoids expensive per-item queries
+    final commentCount = data['commentCount'] as int?;
 
     return Card(
       margin: const EdgeInsets.only(bottom: 16),
@@ -876,7 +663,7 @@ class _FeedScreenState extends State<FeedScreen> {
                           if (photoUrl != null && photoUrl.isNotEmpty) {
                             return CircleAvatar(
                               radius: 20,
-                              backgroundImage: NetworkImage(photoUrl),
+                              backgroundImage: CachedNetworkImageProvider(photoUrl),
                             );
                           }
 
@@ -969,7 +756,7 @@ class _FeedScreenState extends State<FeedScreen> {
                           ),
                     const SizedBox(width: 4),
                     Text(
-                            '$commentCount',
+                            commentCount != null ? '$commentCount' : '0',
                       style: TextStyle(
                         color: Colors.grey[600],
                         fontSize: 14,
@@ -983,8 +770,285 @@ class _FeedScreenState extends State<FeedScreen> {
               ],
             ),
         ),
-        );
-      },
+      );
+  }
+}
+
+class _CommentsDialogContent extends StatefulWidget {
+  final String workoutId;
+  final String postOwnerId;
+  final User? user;
+  final Future<void> Function(String, String, String, {String? parentCommentId, String? parentCommentOwnerId}) onAddComment;
+  final Widget Function({
+    required String workoutId,
+    required String commentId,
+    required Map<String, dynamic> comment,
+    required String commentOwnerId,
+    required String postOwnerId,
+    required bool isLikedByOwner,
+    required List<dynamic> likes,
+    required VoidCallback onReply,
+    User? user,
+  }) buildCommentWidget;
+
+  const _CommentsDialogContent({
+    required this.workoutId,
+    required this.postOwnerId,
+    required this.user,
+    required this.onAddComment,
+    required this.buildCommentWidget,
+  });
+
+  @override
+  State<_CommentsDialogContent> createState() => _CommentsDialogContentState();
+}
+
+class _CommentsDialogContentState extends State<_CommentsDialogContent> {
+  late final TextEditingController _commentController;
+  late final ValueNotifier<String?> _replyingToCommentId;
+  late final ValueNotifier<String?> _replyingToUserName;
+  late final ValueNotifier<String?> _replyingToCommentOwnerId;
+
+  @override
+  void initState() {
+    super.initState();
+    _commentController = TextEditingController();
+    _replyingToCommentId = ValueNotifier<String?>(null);
+    _replyingToUserName = ValueNotifier<String?>(null);
+    _replyingToCommentOwnerId = ValueNotifier<String?>(null);
+  }
+
+  @override
+  void dispose() {
+    _commentController.dispose();
+    _replyingToCommentId.dispose();
+    _replyingToUserName.dispose();
+    _replyingToCommentOwnerId.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: EdgeInsets.only(
+        bottom: MediaQuery.of(context).viewInsets.bottom,
+      ),
+      child: DraggableScrollableSheet(
+        initialChildSize: 0.7,
+        minChildSize: 0.5,
+        maxChildSize: 0.95,
+        expand: false,
+        builder: (context, scrollController) {
+          return ValueListenableBuilder<String?>(
+            valueListenable: _replyingToCommentId,
+            builder: (context, currentReplyId, _) {
+              return Column(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      border: Border(
+                        bottom: BorderSide(color: Colors.grey[300]!),
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        const Text(
+                          'Comments',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const Spacer(),
+                        IconButton(
+                          icon: const Icon(Icons.close),
+                          onPressed: () => Navigator.pop(context),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Expanded(
+                    child: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+                      stream: FirebaseFirestore.instance
+                          .collection('workouts')
+                          .doc(widget.workoutId)
+                          .collection('comments')
+                          .snapshots(includeMetadataChanges: false),
+                      builder: (context, snapshot) {
+                        if (snapshot.connectionState == ConnectionState.waiting) {
+                          return const Center(child: CircularProgressIndicator());
+                        }
+
+                        if (snapshot.hasError) {
+                          return Center(
+                            child: Padding(
+                              padding: const EdgeInsets.all(16.0),
+                              child: Text(
+                                'Error loading comments: ${snapshot.error}',
+                                textAlign: TextAlign.center,
+                              ),
+                            ),
+                          );
+                        }
+
+                        if (!snapshot.hasData) {
+                          return const Center(child: Text('No comments yet'));
+                        }
+
+                        final comments = snapshot.data!.docs;
+
+                        if (comments.isEmpty) {
+                          return const Center(child: Text('No comments yet'));
+                        }
+
+                        final sortedComments = List.from(comments);
+                        sortedComments.sort((a, b) {
+                          final aTime = a.data()['createdAt'] as Timestamp?;
+                          final bTime = b.data()['createdAt'] as Timestamp?;
+                          if (aTime == null && bTime == null) return 0;
+                          if (aTime == null) return 1;
+                          if (bTime == null) return -1;
+                          return aTime.compareTo(bTime);
+                        });
+
+                        return ListView.builder(
+                          controller: scrollController,
+                          padding: const EdgeInsets.all(16),
+                          itemCount: sortedComments.length,
+                          itemBuilder: (context, index) {
+                            final comment = sortedComments[index].data();
+                            final commentId = sortedComments[index].id;
+                            final commentOwnerId = comment['userId'] as String? ?? '';
+                            final likes = List<dynamic>.from(
+                              comment['likes'] as List? ?? [],
+                            );
+                            final isLikedByOwner =
+                                widget.user?.uid == widget.postOwnerId &&
+                                likes.contains(widget.user?.uid);
+
+                            return widget.buildCommentWidget(
+                              workoutId: widget.workoutId,
+                              commentId: commentId,
+                              comment: comment,
+                              commentOwnerId: commentOwnerId,
+                              postOwnerId: widget.postOwnerId,
+                              isLikedByOwner: isLikedByOwner,
+                              likes: likes,
+                              onReply: () {
+                                _replyingToCommentId.value = commentId;
+                                _replyingToUserName.value = comment['userName'] as String? ?? 'Anonymous';
+                                _replyingToCommentOwnerId.value = commentOwnerId;
+                                _commentController.clear();
+                              },
+                              user: widget.user,
+                            );
+                          },
+                        );
+                      },
+                    ),
+                  ),
+                  if (currentReplyId != null)
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      color: Colors.blue[50],
+                      child: Row(
+                        children: [
+                          Icon(Icons.reply, size: 16, color: Colors.blue[700]),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Replying to ${_replyingToUserName.value ?? 'comment'}',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.blue[700],
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                          const Spacer(),
+                          TextButton(
+                            onPressed: () {
+                              _replyingToCommentId.value = null;
+                              _replyingToUserName.value = null;
+                              _replyingToCommentOwnerId.value = null;
+                              _commentController.clear();
+                            },
+                            child: const Text('Cancel'),
+                          ),
+                        ],
+                      ),
+                    ),
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      border: Border(top: BorderSide(color: Colors.grey[300]!)),
+                      color: Colors.white,
+                    ),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: TextField(
+                            controller: _commentController,
+                            decoration: InputDecoration(
+                              hintText: currentReplyId != null
+                                  ? 'Write a reply...'
+                                  : 'Write a comment...',
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(24),
+                                borderSide: BorderSide(color: Colors.grey[300]!),
+                              ),
+                              contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 8,
+                              ),
+                            ),
+                            maxLines: null,
+                            textInputAction: TextInputAction.send,
+                            onSubmitted: (value) {
+                              if (value.trim().isNotEmpty) {
+                                widget.onAddComment(
+                                  widget.workoutId,
+                                  value,
+                                  widget.postOwnerId,
+                                  parentCommentId: _replyingToCommentId.value,
+                                  parentCommentOwnerId: _replyingToCommentOwnerId.value,
+                                );
+                                _commentController.clear();
+                                _replyingToCommentId.value = null;
+                                _replyingToUserName.value = null;
+                                _replyingToCommentOwnerId.value = null;
+                              }
+                            },
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        IconButton(
+                          icon: const Icon(Icons.send),
+                          color: const Color(0xFF1a1d2e),
+                          onPressed: () {
+                            if (_commentController.text.trim().isNotEmpty) {
+                              widget.onAddComment(
+                                widget.workoutId,
+                                _commentController.text,
+                                widget.postOwnerId,
+                                parentCommentId: _replyingToCommentId.value,
+                                parentCommentOwnerId: _replyingToCommentOwnerId.value,
+                              );
+                              _commentController.clear();
+                              _replyingToCommentId.value = null;
+                              _replyingToUserName.value = null;
+                              _replyingToCommentOwnerId.value = null;
+                            }
+                          },
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              );
+            },
+          );
+        },
+      ),
     );
   }
 }
