@@ -39,17 +39,17 @@ class _FeedScreenState extends State<FeedScreen> {
       likes.remove(user.uid);
     } else {
       likes.add(user.uid);
-      
-      
+
       try {
         final userDoc = await FirebaseFirestore.instance
             .collection('users')
             .doc(user.uid)
             .get();
-        final userName = userDoc.data()?['displayName'] as String? ??
+        final userName =
+            userDoc.data()?['displayName'] as String? ??
             user.email ??
             'Someone';
-        
+
         await NotificationService.createLikeNotification(
           postId: workoutId,
           postOwnerId: postOwnerId,
@@ -96,7 +96,6 @@ class _FeedScreenState extends State<FeedScreen> {
           'Anonymous';
 
       if (parentCommentId != null) {
-        
         await FirebaseFirestore.instance
             .collection('workouts')
             .doc(workoutId)
@@ -110,7 +109,6 @@ class _FeedScreenState extends State<FeedScreen> {
               'createdAt': Timestamp.now(),
             });
 
-        
         if (parentCommentOwnerId != null) {
           await NotificationService.createReplyNotification(
             postId: workoutId,
@@ -122,7 +120,6 @@ class _FeedScreenState extends State<FeedScreen> {
           );
         }
       } else {
-        
         await FirebaseFirestore.instance
             .collection('workouts')
             .doc(workoutId)
@@ -143,7 +140,6 @@ class _FeedScreenState extends State<FeedScreen> {
         final currentCount = workoutDoc.data()?['commentCount'] as int? ?? 0;
         await workoutRef.update({'commentCount': currentCount + 1});
 
-        
         await NotificationService.createCommentNotification(
           postId: workoutId,
           postOwnerId: postOwnerId,
@@ -237,7 +233,7 @@ class _FeedScreenState extends State<FeedScreen> {
           .snapshots(),
       builder: (context, repliesSnapshot) {
         final replies = repliesSnapshot.data?.docs ?? [];
-        
+
         return Container(
           margin: const EdgeInsets.only(bottom: 12),
           child: Column(
@@ -271,10 +267,7 @@ class _FeedScreenState extends State<FeedScreen> {
                           ),
                         ),
                         const SizedBox(height: 4),
-                        Text(
-                          commentText,
-                          style: const TextStyle(fontSize: 14),
-                        ),
+                        Text(commentText, style: const TextStyle(fontSize: 14)),
                         const SizedBox(height: 4),
                         Row(
                           children: [
@@ -333,7 +326,7 @@ class _FeedScreenState extends State<FeedScreen> {
                   ),
                 ],
               ),
-              
+
               if (replies.isNotEmpty) ...[
                 const SizedBox(height: 8),
                 Padding(
@@ -341,9 +334,10 @@ class _FeedScreenState extends State<FeedScreen> {
                   child: Column(
                     children: replies.map((replyDoc) {
                       final reply = replyDoc.data();
-                      final replyUserName = reply['userName'] as String? ?? 'Anonymous';
+                      final replyUserName =
+                          reply['userName'] as String? ?? 'Anonymous';
                       final replyText = reply['text'] as String? ?? '';
-                      
+
                       return Container(
                         margin: const EdgeInsets.only(bottom: 8),
                         padding: const EdgeInsets.all(12),
@@ -435,19 +429,11 @@ class _FeedScreenState extends State<FeedScreen> {
             mainAxisSize: MainAxisSize.min,
             children: [
               const Text(
-                'BEAST MODE',
+                'BEAST MODE FEED',
                 style: TextStyle(
                   fontWeight: FontWeight.bold,
                   fontSize: 20,
                   letterSpacing: 1.2,
-                ),
-              ),
-              Text(
-                'Your Feed',
-                style: TextStyle(
-                  fontSize: 12,
-                  color: Colors.grey[600],
-                  fontWeight: FontWeight.w400,
                 ),
               ),
             ],
@@ -468,19 +454,11 @@ class _FeedScreenState extends State<FeedScreen> {
           mainAxisSize: MainAxisSize.min,
           children: [
             const Text(
-              'BEAST MODE',
+              'BEAST MODE FEED',
               style: TextStyle(
                 fontWeight: FontWeight.bold,
                 fontSize: 20,
                 letterSpacing: 1.2,
-              ),
-            ),
-            Text(
-              'Your Feed',
-              style: TextStyle(
-                fontSize: 12,
-                color: Colors.grey[600],
-                fontWeight: FontWeight.w400,
               ),
             ),
           ],
@@ -621,7 +599,7 @@ class _FeedScreenState extends State<FeedScreen> {
     return Card(
       margin: const EdgeInsets.only(bottom: 16),
       elevation: 0,
-          color: const Color.fromARGB(52, 174, 174, 174),
+      color: const Color.fromARGB(52, 174, 174, 174),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
         side: BorderSide(color: Colors.grey[300]!),
@@ -631,75 +609,68 @@ class _FeedScreenState extends State<FeedScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-                
             Row(
               children: [
-                    if (postOwnerId.isEmpty)
-                CircleAvatar(
-                  radius: 20,
-                  backgroundColor: Colors.grey[300],
-                  child: Text(
+                if (postOwnerId.isEmpty)
+                  CircleAvatar(
+                    radius: 20,
+                    backgroundColor: Colors.grey[300],
+                    child: Text(
+                      userName.isNotEmpty ? userName[0].toUpperCase() : 'B',
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: Colors.grey,
+                      ),
+                    ),
+                  )
+                else
+                  FutureBuilder<DocumentSnapshot<Map<String, dynamic>>>(
+                    future: FirebaseFirestore.instance
+                        .collection('users')
+                        .doc(postOwnerId)
+                        .get(),
+                    builder: (context, snapshot) {
+                      String? photoUrl;
+                      if (snapshot.hasData && snapshot.data!.data() != null) {
+                        photoUrl =
+                            snapshot.data!.data()!['photoUrl'] as String?;
+                      }
+
+                      if (photoUrl != null && photoUrl.isNotEmpty) {
+                        return CircleAvatar(
+                          radius: 20,
+                          backgroundImage: CachedNetworkImageProvider(photoUrl),
+                        );
+                      }
+
+                      return CircleAvatar(
+                        radius: 20,
+                        backgroundColor: Colors.grey[300],
+                        child: Text(
                           userName.isNotEmpty ? userName[0].toUpperCase() : 'B',
                           style: const TextStyle(
                             fontWeight: FontWeight.bold,
                             color: Colors.grey,
                           ),
                         ),
-                      )
-                    else
-                      FutureBuilder<DocumentSnapshot<Map<String, dynamic>>>(
-                        future: FirebaseFirestore.instance
-                            .collection('users')
-                            .doc(postOwnerId)
-                            .get(),
-                        builder: (context, snapshot) {
-                          String? photoUrl;
-                          if (snapshot.hasData &&
-                              snapshot.data!.data() != null) {
-                            photoUrl =
-                                snapshot.data!.data()!['photoUrl'] as String?;
-                          }
-
-                          if (photoUrl != null && photoUrl.isNotEmpty) {
-                            return CircleAvatar(
-                              radius: 20,
-                              backgroundImage: CachedNetworkImageProvider(photoUrl),
-                            );
-                          }
-
-                          return CircleAvatar(
-                            radius: 20,
-                            backgroundColor: Colors.grey[300],
-                            child: Text(
-                              userName.isNotEmpty
-                                  ? userName[0].toUpperCase()
-                                  : 'B',
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      color: Colors.grey,
-                    ),
+                      );
+                    },
                   ),
-                          );
-                        },
-                ),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                            userName,
+                        userName,
                         style: const TextStyle(
                           fontWeight: FontWeight.bold,
                           fontSize: 16,
                         ),
                       ),
                       Text(
-                            subtitle,
-                        style: TextStyle(
-                          color: Colors.grey[600],
-                          fontSize: 12,
-                        ),
+                        subtitle,
+                        style: TextStyle(color: Colors.grey[600], fontSize: 12),
                       ),
                     ],
                   ),
@@ -708,69 +679,60 @@ class _FeedScreenState extends State<FeedScreen> {
             ),
             const SizedBox(height: 16),
             Text(
-                  title,
-              style: const TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-              ),
+              title,
+              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
-                if (notes.isNotEmpty) ...[
-            const SizedBox(height: 4),
-            Text(
-                    notes,
-                    style: TextStyle(fontSize: 14, color: Colors.grey[700]),
-                  ),
-                ],
+            if (notes.isNotEmpty) ...[
+              const SizedBox(height: 4),
+              Text(
+                notes,
+                style: TextStyle(fontSize: 14, color: Colors.grey[700]),
+              ),
+            ],
             const SizedBox(height: 16),
-                Row(
-                  children: [
-                    GestureDetector(
-                      onTap: () => _toggleLike(workoutId, likes, postOwnerId),
-                      child: Row(
-                        children: [
-                          Icon(
-                            isLiked ? Icons.favorite : Icons.favorite_border,
-                            size: 20,
-                            color: isLiked ? Colors.red : Colors.grey[600],
-                          ),
-                    const SizedBox(width: 4),
-                    Text(
-                            '$likeCount',
-                      style: TextStyle(
-                        color: Colors.grey[600],
-                        fontSize: 14,
+            Row(
+              children: [
+                GestureDetector(
+                  onTap: () => _toggleLike(workoutId, likes, postOwnerId),
+                  child: Row(
+                    children: [
+                      Icon(
+                        isLiked ? Icons.favorite : Icons.favorite_border,
+                        size: 20,
+                        color: isLiked ? Colors.red : Colors.grey[600],
                       ),
-                    ),
-                  ],
+                      const SizedBox(width: 4),
+                      Text(
+                        '$likeCount',
+                        style: TextStyle(color: Colors.grey[600], fontSize: 14),
                       ),
+                    ],
+                  ),
                 ),
                 const SizedBox(width: 24),
-                    GestureDetector(
-                      onTap: () => _showCommentsDialog(workoutId, postOwnerId),
-                      child: Row(
-                  children: [
-                          const Icon(
-                            Icons.chat_bubble_outline,
-                            size: 20,
-                            color: Color.fromARGB(159, 0, 0, 0),
-                          ),
-                    const SizedBox(width: 4),
-                    Text(
-                            commentCount != null ? '$commentCount' : '0',
-                      style: TextStyle(
-                        color: Colors.grey[600],
-                        fontSize: 14,
-                            ),
-                          ),
-                        ],
+                GestureDetector(
+                  onTap: () => _showCommentsDialog(workoutId, postOwnerId),
+                  child: Row(
+                    children: [
+                      const Icon(
+                        Icons.chat_bubble_outline,
+                        size: 20,
+                        color: Color.fromARGB(159, 0, 0, 0),
                       ),
-                    ),
-                  ],
+                      const SizedBox(width: 4),
+                      Text(
+                        commentCount != null ? '$commentCount' : '0',
+                        style: TextStyle(color: Colors.grey[600], fontSize: 14),
+                      ),
+                    ],
+                  ),
                 ),
               ],
             ),
+          ],
         ),
-      );
+      ),
+    );
   }
 }
 
@@ -778,7 +740,14 @@ class _CommentsDialogContent extends StatefulWidget {
   final String workoutId;
   final String postOwnerId;
   final User? user;
-  final Future<void> Function(String, String, String, {String? parentCommentId, String? parentCommentOwnerId}) onAddComment;
+  final Future<void> Function(
+    String,
+    String,
+    String, {
+    String? parentCommentId,
+    String? parentCommentOwnerId,
+  })
+  onAddComment;
   final Widget Function({
     required String workoutId,
     required String commentId,
@@ -789,7 +758,8 @@ class _CommentsDialogContent extends StatefulWidget {
     required List<dynamic> likes,
     required VoidCallback onReply,
     User? user,
-  }) buildCommentWidget;
+  })
+  buildCommentWidget;
 
   const _CommentsDialogContent({
     required this.workoutId,
@@ -876,8 +846,11 @@ class _CommentsDialogContentState extends State<_CommentsDialogContent> {
                           .collection('comments')
                           .snapshots(includeMetadataChanges: false),
                       builder: (context, snapshot) {
-                        if (snapshot.connectionState == ConnectionState.waiting) {
-                          return const Center(child: CircularProgressIndicator());
+                        if (snapshot.connectionState ==
+                            ConnectionState.waiting) {
+                          return const Center(
+                            child: CircularProgressIndicator(),
+                          );
                         }
 
                         if (snapshot.hasError) {
@@ -919,7 +892,8 @@ class _CommentsDialogContentState extends State<_CommentsDialogContent> {
                           itemBuilder: (context, index) {
                             final comment = sortedComments[index].data();
                             final commentId = sortedComments[index].id;
-                            final commentOwnerId = comment['userId'] as String? ?? '';
+                            final commentOwnerId =
+                                comment['userId'] as String? ?? '';
                             final likes = List<dynamic>.from(
                               comment['likes'] as List? ?? [],
                             );
@@ -937,8 +911,11 @@ class _CommentsDialogContentState extends State<_CommentsDialogContent> {
                               likes: likes,
                               onReply: () {
                                 _replyingToCommentId.value = commentId;
-                                _replyingToUserName.value = comment['userName'] as String? ?? 'Anonymous';
-                                _replyingToCommentOwnerId.value = commentOwnerId;
+                                _replyingToUserName.value =
+                                    comment['userName'] as String? ??
+                                    'Anonymous';
+                                _replyingToCommentOwnerId.value =
+                                    commentOwnerId;
                                 _commentController.clear();
                               },
                               user: widget.user,
@@ -950,7 +927,10 @@ class _CommentsDialogContentState extends State<_CommentsDialogContent> {
                   ),
                   if (currentReplyId != null)
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 8,
+                      ),
                       color: Colors.blue[50],
                       child: Row(
                         children: [
@@ -994,7 +974,9 @@ class _CommentsDialogContentState extends State<_CommentsDialogContent> {
                                   : 'Write a comment...',
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(24),
-                                borderSide: BorderSide(color: Colors.grey[300]!),
+                                borderSide: BorderSide(
+                                  color: Colors.grey[300]!,
+                                ),
                               ),
                               contentPadding: const EdgeInsets.symmetric(
                                 horizontal: 16,
@@ -1010,7 +992,8 @@ class _CommentsDialogContentState extends State<_CommentsDialogContent> {
                                   value,
                                   widget.postOwnerId,
                                   parentCommentId: _replyingToCommentId.value,
-                                  parentCommentOwnerId: _replyingToCommentOwnerId.value,
+                                  parentCommentOwnerId:
+                                      _replyingToCommentOwnerId.value,
                                 );
                                 _commentController.clear();
                                 _replyingToCommentId.value = null;
@@ -1031,7 +1014,8 @@ class _CommentsDialogContentState extends State<_CommentsDialogContent> {
                                 _commentController.text,
                                 widget.postOwnerId,
                                 parentCommentId: _replyingToCommentId.value,
-                                parentCommentOwnerId: _replyingToCommentOwnerId.value,
+                                parentCommentOwnerId:
+                                    _replyingToCommentOwnerId.value,
                               );
                               _commentController.clear();
                               _replyingToCommentId.value = null;
