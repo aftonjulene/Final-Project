@@ -22,7 +22,7 @@ class ChallengesScreen extends StatelessWidget {
 
     final now = DateTime.now();
     final participantRef = FirebaseFirestore.instance
-        .collection('challengeParticipants') // FIXED: correct collection
+        .collection('challengeParticipants') 
         .doc('${challenge.id}_${user.uid}');
 
     final participant = ChallengeParticipant(

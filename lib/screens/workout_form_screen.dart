@@ -179,7 +179,7 @@ class _WorkoutFormScreenState extends State<WorkoutFormScreen> {
       );
 
       if (!mounted) return;
-      Navigator.pop(context); // go back to wherever we came from
+      Navigator.pop(context); 
     } catch (_) {
       setState(() {
         _error = 'Failed to save workout. Please try again.';

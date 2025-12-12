@@ -33,7 +33,7 @@ class _DetailedStatsScreenState extends State<DetailedStatsScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Time period selector
+            
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
@@ -45,7 +45,7 @@ class _DetailedStatsScreenState extends State<DetailedStatsScreen> {
               ],
             ),
             const SizedBox(height: 32),
-            // Workout Frequency Chart
+            
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
@@ -78,7 +78,7 @@ class _DetailedStatsScreenState extends State<DetailedStatsScreen> {
               ),
             ),
             const SizedBox(height: 24),
-            // Total Volume Chart
+            
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
@@ -111,7 +111,7 @@ class _DetailedStatsScreenState extends State<DetailedStatsScreen> {
               ),
             ),
             const SizedBox(height: 24),
-            // Exercise Distribution Chart
+            
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
@@ -167,7 +167,7 @@ class _DetailedStatsScreenState extends State<DetailedStatsScreen> {
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () {
-          // Export or share stats
+          
         },
         backgroundColor: const Color(0xFF1a1d2e),
         child: const Icon(Icons.share, color: Colors.white),

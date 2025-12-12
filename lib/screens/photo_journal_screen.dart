@@ -141,7 +141,7 @@ class _PhotoJournalScreenState extends State<PhotoJournalScreen> {
         );
         await storageRef.delete();
       } catch (_) {
-        // If storage delete fails, continue (might be a URL issue)
+        
       }
 
       if (!mounted) return;

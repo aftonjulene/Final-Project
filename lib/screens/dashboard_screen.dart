@@ -75,12 +75,19 @@ class _DashboardScreenState extends State<DashboardScreen> {
     DateTime start,
     DateTime end,
   ) {
+    // Normalize start and end to date only (no time component)
+    final startDate = DateTime(start.year, start.month, start.day);
+    final endDate = DateTime(end.year, end.month, end.day);
+    
     return workouts.where((doc) {
       final ts = doc.data()['date'];
       if (ts is! Timestamp) return false;
       final date = ts.toDate();
-      return date.isAfter(start.subtract(const Duration(seconds: 1))) &&
-          date.isBefore(end.add(const Duration(days: 1)));
+      final workoutDate = DateTime(date.year, date.month, date.day);
+      
+      // Check if workout date is >= startDate and < endDate (endDate is exclusive)
+      return workoutDate.isAfter(startDate.subtract(const Duration(seconds: 1))) &&
+          workoutDate.isBefore(endDate.add(const Duration(seconds: 1)));
     }).length;
   }
 
@@ -105,38 +112,41 @@ class _DashboardScreenState extends State<DashboardScreen> {
     return frequency;
   }
 
-  List<double> _getVolumeOverTime(
+  // Get workout duration per day for the last 7 days
+  List<Map<String, dynamic>> _getDurationPerDay(
     List<QueryDocumentSnapshot<Map<String, dynamic>>> workouts,
   ) {
     final now = DateTime.now();
-    final weeks = <double>[];
+    final today = DateTime(now.year, now.month, now.day);
+    final daysData = <Map<String, dynamic>>[];
 
-    for (int weekOffset = 3; weekOffset >= 0; weekOffset--) {
-      final weekStart = now.subtract(Duration(days: weekOffset * 7));
-      final weekEnd = weekStart.add(const Duration(days: 7));
+   
+    for (int dayOffset = 6; dayOffset >= 0; dayOffset--) {
+      final targetDate = today.subtract(Duration(days: dayOffset));
+      int totalMinutes = 0;
 
-      double totalVolume = 0.0;
       for (final doc in workouts) {
         final ts = doc.data()['date'];
         if (ts is! Timestamp) continue;
         final date = ts.toDate();
-        if (date.isAfter(weekStart.subtract(const Duration(seconds: 1))) &&
-            date.isBefore(weekEnd)) {
-          final exercises = doc.data()['exercises'] as List?;
-          if (exercises != null) {
-            for (final ex in exercises) {
-              final sets = (ex['sets'] as num?)?.toInt() ?? 0;
-              final reps = (ex['reps'] as num?)?.toInt() ?? 0;
-              final weight = (ex['weight'] as num?)?.toDouble() ?? 0.0;
-              totalVolume += sets * reps * weight;
-            }
+        final workoutDate = DateTime(date.year, date.month, date.day);
+
+       
+        if (workoutDate.isAtSameMomentAs(targetDate)) {
+          final duration = doc.data()['durationMinutes'] as int?;
+          if (duration != null && duration > 0) {
+            totalMinutes += duration;
           }
         }
       }
-      weeks.add(totalVolume);
+
+      daysData.add({
+        'date': targetDate,
+        'minutes': totalMinutes,
+      });
     }
 
-    return weeks;
+    return daysData;
   }
 
   @override
@@ -203,15 +213,24 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
           // Calculate stats
           final now = DateTime.now();
-          final startOfWeek = now.subtract(Duration(days: now.weekday - 1));
+          final today = DateTime(now.year, now.month, now.day);
+          
+          // Calculate start of week (Monday of current week)
+          final daysFromMonday = (now.weekday - 1) % 7;
+          final startOfWeek = today.subtract(Duration(days: daysFromMonday));
+          
+          // End of week is today (inclusive)
+          final endOfWeek = today.add(const Duration(days: 1)); 
+          
+          // Start and end of month
           final startOfMonth = DateTime(now.year, now.month, 1);
-          final endOfMonth = DateTime(now.year, now.month + 1, 0);
+          final endOfMonth = DateTime(now.year, now.month + 1, 0, 23, 59, 59); 
 
           final streak = _calculateStreak(workouts);
           final thisWeekCount = _countWorkoutsInRange(
             workouts,
             startOfWeek,
-            now,
+            endOfWeek,
           );
           final thisMonthCount = _countWorkoutsInRange(
             workouts,
@@ -219,66 +238,66 @@ class _DashboardScreenState extends State<DashboardScreen> {
             endOfMonth,
           );
           final weeklyFrequency = _getWeeklyFrequency(workouts);
-          final volumeOverTime = _getVolumeOverTime(workouts);
+          final durationPerDay = _getDurationPerDay(workouts);
 
           return SingleChildScrollView(
-            padding: const EdgeInsets.all(24.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // ---------------- CURRENT STREAK CARD ----------------
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(24),
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [Colors.orange[400]!, Colors.red[400]!],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
+        padding: const EdgeInsets.all(24.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // ---------------- CURRENT STREAK CARD ----------------
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [Colors.orange[400]!, Colors.red[400]!],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Column(
+                children: [
+                  const Text(
+                    'CURRENT STREAK',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white70,
+                      letterSpacing: 1.2,
                     ),
-                    borderRadius: BorderRadius.circular(16),
                   ),
-                  child: Column(
-                    children: [
-                      const Text(
-                        'CURRENT STREAK',
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white70,
-                          letterSpacing: 1.2,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
+                  const SizedBox(height: 8),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           const Text('🔥', style: TextStyle(fontSize: 32)),
                           const SizedBox(width: 8),
-                          Text(
+                      Text(
                             '$streak',
                             style: const TextStyle(
-                              fontSize: 48,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white,
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 4),
-                      const Text(
-                        'days in a row',
-                        style: TextStyle(fontSize: 14, color: Colors.white),
+                          fontSize: 48,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
                       ),
                     ],
                   ),
-                ),
+                  const SizedBox(height: 4),
+                  const Text(
+                    'days in a row',
+                    style: TextStyle(fontSize: 14, color: Colors.white),
+                  ),
+                ],
+              ),
+            ),
 
-                const SizedBox(height: 24),
+            const SizedBox(height: 24),
 
-                // ---------------- STATS ROW ----------------
-                Row(
-                  children: [
+            // ---------------- STATS ROW ----------------
+            Row(
+              children: [
                     Expanded(
                       child: StatCard(
                         title: 'THIS WEEK',
@@ -286,7 +305,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         label: 'workouts',
                       ),
                     ),
-                    const SizedBox(width: 12),
+                const SizedBox(width: 12),
                     Expanded(
                       child: StatCard(
                         title: 'THIS MONTH',
@@ -294,39 +313,39 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         label: 'workouts',
                       ),
                     ),
-                  ],
-                ),
+              ],
+            ),
 
-                const SizedBox(height: 24),
+            const SizedBox(height: 24),
 
-                // ---------------- WEEKLY FREQUENCY ----------------
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    border: Border.all(color: Colors.grey[300]!),
-                    borderRadius: BorderRadius.circular(12),
+            // ---------------- WEEKLY FREQUENCY ----------------
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                border: Border.all(color: Colors.grey[300]!),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'WEEKLY FREQUENCY',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.grey,
+                      letterSpacing: 1.2,
+                    ),
                   ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        'WEEKLY FREQUENCY',
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.grey,
-                          letterSpacing: 1.2,
-                        ),
-                      ),
-                      const SizedBox(height: 24),
+                  const SizedBox(height: 24),
                       SizedBox(
-                        height: 150,
+                    height: 150,
                         child: _buildWeeklyFrequencyChart(weeklyFrequency),
-                      ),
-                      const SizedBox(height: 12),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceAround,
-                        children: const [
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceAround,
+                    children: const [
                           Text(
                             'Mon',
                             style: TextStyle(fontSize: 12, color: Colors.grey),
@@ -355,65 +374,68 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             'Sun',
                             style: TextStyle(fontSize: 12, color: Colors.grey),
                           ),
-                        ],
-                      ),
                     ],
                   ),
-                ),
+                ],
+              ),
+            ),
 
-                const SizedBox(height: 24),
+            const SizedBox(height: 24),
 
-                // ---------------- VOLUME OVER TIME ----------------
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    border: Border.all(color: Colors.grey[300]!),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                // ---------------- WORKOUT DURATION PER DAY ----------------
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                border: Border.all(color: Colors.grey[300]!),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
-                        'VOLUME OVER TIME',
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.grey,
-                          letterSpacing: 1.2,
+                      Row(
+                children: [
+                  const Text(
+                            'WORKOUT DURATION PER DAY',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.grey,
+                      letterSpacing: 1.2,
+                    ),
+                  ),
+                          const SizedBox(width: 8),
+                          Tooltip(
+                            message: 'Total minutes spent working out each day',
+                            child: Icon(
+                              Icons.info_outline,
+                              size: 14,
+                          color: Colors.grey[400],
+                            ),
                         ),
+                        ],
                       ),
                       const SizedBox(height: 24),
                       SizedBox(
                         height: 150,
-                        child: _buildVolumeChart(volumeOverTime),
-                      ),
-                      const SizedBox(height: 12),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: const [
-                          Text(
-                            'Week 1',
-                            style: TextStyle(fontSize: 12, color: Colors.grey),
-                          ),
-                          Text(
-                            'Week 2',
-                            style: TextStyle(fontSize: 12, color: Colors.grey),
-                          ),
-                          Text(
-                            'Week 3',
-                            style: TextStyle(fontSize: 12, color: Colors.grey),
-                          ),
-                          Text(
-                            'Week 4',
-                            style: TextStyle(fontSize: 12, color: Colors.grey),
-                          ),
-                        ],
-                      ),
-                    ],
+                        child: _buildDurationChart(durationPerDay),
                   ),
-                ),
-              ],
+                  const SizedBox(height: 12),
+                  Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceAround,
+                        children: durationPerDay.map((day) {
+                          final date = day['date'] as DateTime;
+                          final dayName = _getDayAbbreviation(date.weekday);
+                          return Text(
+                            dayName,
+                            style: const TextStyle(fontSize: 12, color: Colors.grey),
+                          );
+                        }).toList(),
+                      ),
+                ],
+              ),
             ),
+          ],
+        ),
           );
         },
       ),
@@ -452,7 +474,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
         return Column(
           mainAxisAlignment: MainAxisAlignment.end,
-          children: [
+        children: [
             Container(
               width: 30,
               height: height,
@@ -462,8 +484,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
               ),
             ),
             if (value > 0) ...[
-              const SizedBox(height: 4),
-              Text(
+          const SizedBox(height: 4),
+          Text(
                 '$value',
                 style: const TextStyle(fontSize: 10, color: Colors.grey),
               ),
@@ -475,23 +497,25 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   // ----------------------------------------------------------------
-  // VOLUME OVER TIME LINE CHART
+  // WORKOUT DURATION PER DAY CHART
   // ----------------------------------------------------------------
-  Widget _buildVolumeChart(List<double> volumes) {
-    if (volumes.isEmpty || volumes.every((v) => v == 0)) {
+  Widget _buildDurationChart(List<Map<String, dynamic>> daysData) {
+    final minutes = daysData.map((d) => d['minutes'] as int).toList();
+    
+    if (minutes.isEmpty || minutes.every((m) => m == 0)) {
       return Center(
         child: Text(
-          'No volume data yet',
+          'No workout duration data yet',
           style: TextStyle(color: Colors.grey[400], fontSize: 16),
         ),
       );
     }
 
-    final maxVolume = volumes.reduce((a, b) => a > b ? a : b);
-    if (maxVolume == 0) {
+    final maxMinutes = minutes.reduce((a, b) => a > b ? a : b);
+    if (maxMinutes == 0) {
       return Center(
         child: Text(
-          'No volume data yet',
+          'No workout duration data yet',
           style: TextStyle(color: Colors.grey[400], fontSize: 16),
         ),
       );
@@ -499,21 +523,26 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
     return CustomPaint(
       size: const Size(double.infinity, 150),
-      painter: _VolumeChartPainter(volumes, maxVolume),
+      painter: _DurationChartPainter(minutes, maxMinutes),
     );
+  }
+
+  String _getDayAbbreviation(int weekday) {
+    const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+    return days[weekday - 1];
   }
 }
 
-// Custom painter for line chart
-class _VolumeChartPainter extends CustomPainter {
-  final List<double> volumes;
-  final double maxVolume;
+// Custom painter for duration line chart
+class _DurationChartPainter extends CustomPainter {
+  final List<int> minutes;
+  final int maxMinutes;
 
-  _VolumeChartPainter(this.volumes, this.maxVolume);
+  _DurationChartPainter(this.minutes, this.maxMinutes);
 
   @override
   void paint(Canvas canvas, Size size) {
-    if (volumes.isEmpty) return;
+    if (minutes.isEmpty) return;
 
     final paint = Paint()
       ..color = const Color(0xFF1a1d2e)
@@ -531,16 +560,17 @@ class _VolumeChartPainter extends CustomPainter {
     final padding = 20.0;
     final chartWidth = size.width - (padding * 2);
     final chartHeight = size.height - (padding * 2);
-    final stepX = chartWidth / (volumes.length - 1);
+    final stepX = minutes.length > 1 ? chartWidth / (minutes.length - 1) : 0;
 
     final points = <Offset>[];
-    for (int i = 0; i < volumes.length; i++) {
+    for (int i = 0; i < minutes.length; i++) {
       final x = padding + (i * stepX);
-      final normalizedValue = maxVolume > 0 ? volumes[i] / maxVolume : 0.0;
+      final normalizedValue = maxMinutes > 0 ? minutes[i] / maxMinutes : 0.0;
       final y = size.height - padding - (normalizedValue * chartHeight);
       points.add(Offset(x, y));
     }
 
+    // Draw filled area
     if (points.length > 1) {
       final path = Path()
         ..moveTo(points.first.dx, size.height - padding)
@@ -553,7 +583,7 @@ class _VolumeChartPainter extends CustomPainter {
       canvas.drawPath(path, fillPaint);
     }
 
-    // Draw line
+    
     if (points.length > 1) {
       final path = Path()..moveTo(points.first.dx, points.first.dy);
       for (int i = 1; i < points.length; i++) {
@@ -562,19 +592,31 @@ class _VolumeChartPainter extends CustomPainter {
       canvas.drawPath(path, paint);
     }
 
-    // Draw points
+   
     for (final point in points) {
       canvas.drawCircle(point, 4, pointPaint);
     }
 
-    // Draw volume labels
+   
     final textPainter = TextPainter(textDirection: TextDirection.ltr);
-    for (int i = 0; i < volumes.length; i++) {
-      final volume = volumes[i];
-      if (volume > 0) {
-        final label = volume >= 1000
-            ? '${(volume / 1000).toStringAsFixed(1)}k'
-            : volume.toStringAsFixed(0);
+    for (int i = 0; i < minutes.length; i++) {
+      final mins = minutes[i];
+      if (mins > 0) {
+        String label;
+        if (mins >= 60) {
+          // Show as hours and minutes
+          final hours = mins ~/ 60;
+          final remainingMins = mins % 60;
+          if (remainingMins == 0) {
+            label = '${hours}h';
+          } else {
+            label = '${hours}h ${remainingMins}m';
+          }
+        } else {
+          // Show as minutes
+          label = '${mins}m';
+        }
+        
         textPainter.text = TextSpan(
           text: label,
           style: const TextStyle(fontSize: 10, color: Colors.grey),
@@ -589,7 +631,7 @@ class _VolumeChartPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(_VolumeChartPainter oldDelegate) {
-    return oldDelegate.volumes != volumes || oldDelegate.maxVolume != maxVolume;
+  bool shouldRepaint(_DurationChartPainter oldDelegate) {
+    return oldDelegate.minutes != minutes || oldDelegate.maxMinutes != maxMinutes;
   }
 }

@@ -31,6 +31,13 @@ service cloud.firestore {
         allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
         allow update: if isAuthenticated(); // Allow likes updates (post owner can like)
         allow delete: if isAuthenticated() && resource.data.userId == request.auth.uid;
+        
+        // Replies subcollection - anyone can read, authenticated users can create
+        match /replies/{replyId} {
+          allow read: if isAuthenticated();
+          allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
+          allow update, delete: if isAuthenticated() && resource.data.userId == request.auth.uid;
+        }
       }
     }
 
@@ -52,15 +59,22 @@ service cloud.firestore {
     match /challenge_participants/{participantId} {
       allow read: if isAuthenticated();
       allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
-      allow update, delete: if isAuthenticated() && resource.data.userId == request.auth.uid;
+      allow update, delete: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
     }
 
     // Feed/Public workouts - authenticated users can read, only write their own
     match /feed/{feedId} {
       allow read: if isAuthenticated();
       allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
-      allow update, delete: if isAuthenticated() && resource.data.userId == request.auth.uid;
+      allow update, delete: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
+    }
+
+    // Notifications collection - users can read their own, system can create
+    match /notifications/{notificationId} {
+      allow read: if isAuthenticated() && resource.data.userId == request.auth.uid;
+      allow create: if isAuthenticated(); // Any authenticated user can create notifications
+      allow update: if isAuthenticated() && resource.data.userId == request.auth.uid; // Only owner can mark as read
+      allow delete: if isAuthenticated() && resource.data.userId == request.auth.uid;
     }
   }
 }
-

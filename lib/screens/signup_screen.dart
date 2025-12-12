@@ -65,10 +65,10 @@ class _SignUpScreenState extends State<SignUpScreen> {
         throw Exception('User creation failed.');
       }
 
-      // Update Firebase Auth display name
+      
       await user.updateDisplayName(fullName);
 
-      // Create / update Firestore user document
+      
       final usersRef = FirebaseFirestore.instance
           .collection('users')
           .doc(user.uid);
