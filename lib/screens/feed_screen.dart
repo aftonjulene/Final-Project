@@ -596,140 +596,170 @@ class _FeedScreenState extends State<FeedScreen> {
     // This avoids expensive per-item queries
     final commentCount = data['commentCount'] as int?;
 
-    return Card(
-      margin: const EdgeInsets.only(bottom: 16),
-      elevation: 0,
-      color: const Color.fromARGB(52, 174, 174, 174),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-        side: BorderSide(color: Colors.grey[300]!),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                if (postOwnerId.isEmpty)
-                  CircleAvatar(
-                    radius: 20,
-                    backgroundColor: Colors.grey[300],
-                    child: Text(
-                      userName.isNotEmpty ? userName[0].toUpperCase() : 'B',
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        color: Colors.grey,
-                      ),
-                    ),
-                  )
-                else
-                  FutureBuilder<DocumentSnapshot<Map<String, dynamic>>>(
-                    future: FirebaseFirestore.instance
-                        .collection('users')
-                        .doc(postOwnerId)
-                        .get(),
-                    builder: (context, snapshot) {
-                      String? photoUrl;
-                      if (snapshot.hasData && snapshot.data!.data() != null) {
-                        photoUrl =
-                            snapshot.data!.data()!['photoUrl'] as String?;
-                      }
-
-                      if (photoUrl != null && photoUrl.isNotEmpty) {
-                        return CircleAvatar(
-                          radius: 20,
-                          backgroundImage: CachedNetworkImageProvider(photoUrl),
-                        );
-                      }
-
-                      return CircleAvatar(
-                        radius: 20,
-                        backgroundColor: Colors.grey[300],
-                        child: Text(
-                          userName.isNotEmpty ? userName[0].toUpperCase() : 'B',
-                          style: const TextStyle(
-                            fontWeight: FontWeight.bold,
-                            color: Colors.grey,
-                          ),
-                        ),
-                      );
-                    },
-                  ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        userName,
+    return InkWell(
+      borderRadius: BorderRadius.circular(12),
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => WorkoutDetailScreen(
+              workoutId: workoutId,
+              postOwnerId: postOwnerId,
+            ),
+          ),
+        );
+      },
+      child: Card(
+        margin: const EdgeInsets.only(bottom: 16),
+        elevation: 0,
+        color: const Color.fromARGB(52, 174, 174, 174),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+          side: BorderSide(color: Colors.grey[300]!),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  if (postOwnerId.isEmpty)
+                    CircleAvatar(
+                      radius: 20,
+                      backgroundColor: Colors.grey[300],
+                      child: Text(
+                        userName.isNotEmpty ? userName[0].toUpperCase() : 'B',
                         style: const TextStyle(
                           fontWeight: FontWeight.bold,
-                          fontSize: 16,
+                          color: Colors.grey,
                         ),
                       ),
-                      Text(
-                        subtitle,
-                        style: TextStyle(color: Colors.grey[600], fontSize: 12),
-                      ),
-                    ],
+                    )
+                  else
+                    FutureBuilder<DocumentSnapshot<Map<String, dynamic>>>(
+                      future: FirebaseFirestore.instance
+                          .collection('users')
+                          .doc(postOwnerId)
+                          .get(),
+                      builder: (context, snapshot) {
+                        String? photoUrl;
+                        if (snapshot.hasData && snapshot.data!.data() != null) {
+                          photoUrl =
+                              snapshot.data!.data()!['photoUrl'] as String?;
+                        }
+
+                        if (photoUrl != null && photoUrl.isNotEmpty) {
+                          return CircleAvatar(
+                            radius: 20,
+                            backgroundImage: CachedNetworkImageProvider(
+                              photoUrl,
+                            ),
+                          );
+                        }
+
+                        return CircleAvatar(
+                          radius: 20,
+                          backgroundColor: Colors.grey[300],
+                          child: Text(
+                            userName.isNotEmpty
+                                ? userName[0].toUpperCase()
+                                : 'B',
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: Colors.grey,
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          userName,
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                          ),
+                        ),
+                        Text(
+                          subtitle,
+                          style: TextStyle(
+                            color: Colors.grey[600],
+                            fontSize: 12,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              Text(
+                title,
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              if (notes.isNotEmpty) ...[
+                const SizedBox(height: 4),
+                Text(
+                  notes,
+                  style: TextStyle(fontSize: 14, color: Colors.grey[700]),
                 ),
               ],
-            ),
-            const SizedBox(height: 16),
-            Text(
-              title,
-              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-            if (notes.isNotEmpty) ...[
-              const SizedBox(height: 4),
-              Text(
-                notes,
-                style: TextStyle(fontSize: 14, color: Colors.grey[700]),
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  GestureDetector(
+                    onTap: () => _toggleLike(workoutId, likes, postOwnerId),
+                    child: Row(
+                      children: [
+                        Icon(
+                          isLiked ? Icons.favorite : Icons.favorite_border,
+                          size: 20,
+                          color: isLiked ? Colors.red : Colors.grey[600],
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          '$likeCount',
+                          style: TextStyle(
+                            color: Colors.grey[600],
+                            fontSize: 14,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 24),
+                  GestureDetector(
+                    onTap: () => _showCommentsDialog(workoutId, postOwnerId),
+                    child: Row(
+                      children: [
+                        const Icon(
+                          Icons.chat_bubble_outline,
+                          size: 20,
+                          color: Color.fromARGB(159, 0, 0, 0),
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          commentCount != null ? '$commentCount' : '0',
+                          style: TextStyle(
+                            color: Colors.grey[600],
+                            fontSize: 14,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ),
             ],
-            const SizedBox(height: 16),
-            Row(
-              children: [
-                GestureDetector(
-                  onTap: () => _toggleLike(workoutId, likes, postOwnerId),
-                  child: Row(
-                    children: [
-                      Icon(
-                        isLiked ? Icons.favorite : Icons.favorite_border,
-                        size: 20,
-                        color: isLiked ? Colors.red : Colors.grey[600],
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        '$likeCount',
-                        style: TextStyle(color: Colors.grey[600], fontSize: 14),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 24),
-                GestureDetector(
-                  onTap: () => _showCommentsDialog(workoutId, postOwnerId),
-                  child: Row(
-                    children: [
-                      const Icon(
-                        Icons.chat_bubble_outline,
-                        size: 20,
-                        color: Color.fromARGB(159, 0, 0, 0),
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        commentCount != null ? '$commentCount' : '0',
-                        style: TextStyle(color: Colors.grey[600], fontSize: 14),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ],
+          ),
         ),
       ),
     );
@@ -1030,6 +1060,357 @@ class _CommentsDialogContentState extends State<_CommentsDialogContent> {
                 ],
               );
             },
+          );
+        },
+      ),
+    );
+  }
+}
+
+class WorkoutDetailScreen extends StatelessWidget {
+  final String workoutId;
+  final String postOwnerId;
+
+  const WorkoutDetailScreen({
+    super.key,
+    required this.workoutId,
+    required this.postOwnerId,
+  });
+
+  static const _cardBg = Color.fromARGB(52, 174, 174, 174);
+
+  String _fmtDate(dynamic ts) {
+    if (ts is Timestamp) {
+      final d = ts.toDate();
+      return '${d.month}/${d.day}/${d.year}';
+    }
+    return '';
+  }
+
+  String _prettyValue(dynamic v) {
+    if (v == null) return '';
+    if (v is String) return v;
+    if (v is num || v is bool) return v.toString();
+    if (v is Timestamp) return _fmtDate(v);
+    return v.toString();
+  }
+
+  String _labelize(String k) {
+    final s = k.replaceAllMapped(
+      RegExp(r'([a-z])([A-Z])'),
+      (m) => '${m[1]} ${m[2]}',
+    );
+    return s.isEmpty ? s : '${s[0].toUpperCase()}${s.substring(1)}';
+  }
+
+  Widget _sectionTitle(String text) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Text(
+        text,
+        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+      ),
+    );
+  }
+
+  Widget _infoRow(String k, String v) {
+    if (v.trim().isEmpty) return const SizedBox.shrink();
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 110,
+            child: Text(
+              k,
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: Colors.grey[700],
+              ),
+            ),
+          ),
+          Expanded(
+            child: Text(
+              v,
+              style: const TextStyle(fontSize: 14, color: Colors.black87),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _styledCard({required Widget child}) {
+    return Card(
+      margin: const EdgeInsets.only(bottom: 16),
+      elevation: 0,
+      color: _cardBg,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(color: Colors.grey[300]!),
+      ),
+      child: Padding(padding: const EdgeInsets.all(16), child: child),
+    );
+  }
+
+  Widget _exerciseCard(Map<String, dynamic> ex) {
+    final name = (ex['name'] as String?) ?? 'Exercise';
+
+    final ignoreKeys = <String>{
+      'name',
+      'createdAt',
+      'updatedAt',
+      'id',
+      'workoutId',
+    };
+
+    final entries = ex.entries
+        .where((e) => !ignoreKeys.contains(e.key) && e.value != null)
+        .toList();
+
+    return _styledCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            name,
+            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+          ),
+          if (entries.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            ...entries.map((e) {
+              final v = _prettyValue(e.value);
+              if (v.trim().isEmpty) return const SizedBox.shrink();
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    SizedBox(
+                      width: 110,
+                      child: Text(
+                        _labelize(e.key),
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.grey[700],
+                        ),
+                      ),
+                    ),
+                    Expanded(
+                      child: Text(
+                        v,
+                        style: const TextStyle(
+                          fontSize: 14,
+                          color: Colors.black87,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }),
+          ],
+        ],
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final workoutRef = FirebaseFirestore.instance
+        .collection('workouts')
+        .doc(workoutId);
+
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text(
+          'Workout Details',
+          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+        ),
+        backgroundColor: Colors.white,
+        foregroundColor: Colors.black,
+        elevation: 0,
+      ),
+      body: StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
+        stream: workoutRef.snapshots(),
+        builder: (context, workoutSnap) {
+          if (workoutSnap.connectionState == ConnectionState.waiting) {
+            return const Center(
+              child: CircularProgressIndicator(strokeWidth: 2),
+            );
+          }
+          if (!workoutSnap.hasData || workoutSnap.data?.data() == null) {
+            return const Center(child: Text('Workout not found.'));
+          }
+
+          final w = workoutSnap.data!.data()!;
+
+          final userName = (w['userName'] as String?) ?? 'Beast Mode Athlete';
+          final title = (w['title'] as String?) ?? 'Workout';
+          final notes = (w['notes'] as String?) ?? '';
+          final goal = (w['userGoal'] as String?) ?? '';
+          final duration = w['durationMinutes'];
+          final dateLabel = _fmtDate(w['date']);
+
+          String subtitle = dateLabel;
+          if (duration != null) subtitle += ' • ${duration.toString()} min';
+          if (goal.trim().isNotEmpty) subtitle += ' • $goal';
+
+          return ListView(
+            padding: const EdgeInsets.all(16),
+            children: [
+              _styledCard(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        FutureBuilder<DocumentSnapshot<Map<String, dynamic>>>(
+                          future: postOwnerId.isEmpty
+                              ? null
+                              : FirebaseFirestore.instance
+                                    .collection('users')
+                                    .doc(postOwnerId)
+                                    .get(),
+                          builder: (context, snap) {
+                            String? photoUrl;
+                            if (snap.hasData && snap.data?.data() != null) {
+                              photoUrl =
+                                  snap.data!.data()!['photoUrl'] as String?;
+                            }
+
+                            if (photoUrl != null && photoUrl.isNotEmpty) {
+                              return CircleAvatar(
+                                radius: 20,
+                                backgroundImage: CachedNetworkImageProvider(
+                                  photoUrl,
+                                ),
+                              );
+                            }
+
+                            return CircleAvatar(
+                              radius: 20,
+                              backgroundColor: Colors.grey[300],
+                              child: Text(
+                                userName.isNotEmpty
+                                    ? userName[0].toUpperCase()
+                                    : 'B',
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.grey,
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                userName,
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 16,
+                                ),
+                              ),
+                              Text(
+                                subtitle,
+                                style: TextStyle(
+                                  color: Colors.grey[600],
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      title,
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    if (notes.trim().isNotEmpty) ...[
+                      const SizedBox(height: 6),
+                      Text(
+                        notes,
+                        style: TextStyle(fontSize: 14, color: Colors.grey[700]),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+
+              _sectionTitle('Workout Info'),
+              _styledCard(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _infoRow('Date', dateLabel),
+                    _infoRow(
+                      'Duration',
+                      duration == null ? '' : '${duration.toString()} min',
+                    ),
+                    _infoRow('Goal', goal),
+                    if (notes.trim().isNotEmpty) _infoRow('Notes', notes),
+                  ],
+                ),
+              ),
+
+              _sectionTitle('Exercises'),
+              StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+                stream: workoutRef
+                    .collection('exercises')
+                    .orderBy('createdAt', descending: false)
+                    .snapshots(),
+                builder: (context, exSnap) {
+                  if (exSnap.connectionState == ConnectionState.waiting) {
+                    return const Padding(
+                      padding: EdgeInsets.only(top: 16),
+                      child: Center(
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      ),
+                    );
+                  }
+
+                  final exDocs = exSnap.data?.docs ?? [];
+                  final fallbackArray = (w['exercises'] is List)
+                      ? (w['exercises'] as List)
+                      : const [];
+
+                  if (exDocs.isEmpty && fallbackArray.isEmpty) {
+                    return _styledCard(
+                      child: const Text('No exercises saved for this workout.'),
+                    );
+                  }
+
+                  if (exDocs.isEmpty && fallbackArray.isNotEmpty) {
+                    return Column(
+                      children: fallbackArray.map((e) {
+                        final m = (e is Map)
+                            ? Map<String, dynamic>.from(e as Map)
+                            : <String, dynamic>{'name': 'Exercise', 'value': e};
+                        return _exerciseCard(m);
+                      }).toList(),
+                    );
+                  }
+
+                  return Column(
+                    children: exDocs
+                        .map((d) => _exerciseCard(d.data()))
+                        .toList(),
+                  );
+                },
+              ),
+            ],
           );
         },
       ),
