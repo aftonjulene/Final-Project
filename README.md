@@ -28,7 +28,7 @@ A comprehensive Flutter-based fitness tracking application that helps users log 
 - Optimized for memory and performance
 - Material Design 3 UI
 
-## 📋 Prerequisites
+##  Prerequisites
 
 Before you begin, ensure you have the following installed:
 
@@ -316,7 +316,7 @@ service firebase.storage {
   flutter run -d chrome
   ```
 
-## 📁 Project Structure
+##  Project Structure
 
 ```
 lib/
@@ -380,7 +380,7 @@ lib/
 - **flutter_test**: Testing framework
 - **flutter_lints**: ^5.0.0 - Linting rules
 
-## ⚡ Performance Optimizations
+##  Performance Optimizations
 
 This app includes several performance optimizations:
 
@@ -414,7 +414,7 @@ flutter run --profile
 
 Then use Flutter DevTools to analyze performance.
 
-## 🛠️ Development
+##  Development
 
 ### Code Formatting
 
@@ -509,7 +509,7 @@ cd ..
 - Check existing issues in the repository
 - Review [PERFORMANCE_OPTIMIZATION.md](./PERFORMANCE_OPTIMIZATION.md) for performance-related issues
 
-## 📱 Supported Platforms
+##  Supported Platforms
 
 -  Android (API 21+)
 -  iOS (12.0+)

@@ -159,3 +159,4 @@ Consider adding:
 - [Flutter Performance Best Practices](https://docs.flutter.dev/perf/best-practices)
 - [Flutter DevTools Documentation](https://docs.flutter.dev/tools/devtools)
 - [Firestore Best Practices](https://firebase.google.com/docs/firestore/best-practices)
+
